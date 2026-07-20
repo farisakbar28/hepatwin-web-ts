@@ -6,18 +6,26 @@ import type { SimulationRequest } from '../../types';
 export const ControlPanel: React.FC = () => {
   const { mode, setMode, connectionStatus, runSimulation, isSimulating } = useAppStore();
   
-  const [compound, setCompound] = useState('Parasetamol');
+  const [compound, setCompound] = useState('paracetamol');
   const [dose, setDose] = useState(150);
   const [smiles, setSmiles] = useState('');
 
   const handleSimulate = () => {
-    const payload: SimulationRequest = {
-      mode,
-      ...(mode === 'edukasi_mendalam' 
-        ? { compound_name: compound, dose_mg_kg: dose }
-        : { input_smiles: smiles || 'CC(=O)NC1=CC=C(O)C=C1' })
-    };
-    runSimulation(payload);
+    // Sanitasi ketat untuk backend FastAPI (Pydantic)
+    // TypeScript strict compliant mapping
+    const finalPayload: SimulationRequest = { mode };
+    if (mode === 'edukasi_mendalam') {
+      finalPayload.compound_id = compound || 'paracetamol';
+      finalPayload.dose_mg_kg = dose ? Number(dose) : 150;
+      finalPayload.smiles_string = null;
+    } else {
+      finalPayload.smiles_string = smiles || 'CC(=O)NC1=CC=C(O)C=C1';
+      finalPayload.compound_id = null;
+      finalPayload.dose_mg_kg = null;
+    }
+
+    console.log("📤 SENDING SANITIZED PAYLOAD TO FASTAPI:", finalPayload);
+    runSimulation(finalPayload);
   };
 
   return (
@@ -71,8 +79,8 @@ export const ControlPanel: React.FC = () => {
                 onChange={(e) => setCompound(e.target.value)}
                 className="w-full bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               >
-                <option value="Parasetamol">Acetaminophen / Parasetamol</option>
-                <option value="Amoxicillin-Clavulanate">Amoxicillin-Clavulanate</option>
+                <option value="paracetamol">Acetaminophen / Parasetamol</option>
+                <option value="amox_clav">Amoxicillin-Clavulanate</option>
               </select>
             </div>
             <div>

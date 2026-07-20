@@ -3,9 +3,9 @@ export type AffectedZone = 'Zone_3' | 'Portal_Periportal' | 'Macro_Generic';
 
 export interface SimulationRequest {
   mode: SimulationMode;
-  compound_name?: string;
-  input_smiles?: string;
-  dose_mg_kg?: number;
+  compound_id?: string | null;
+  dose_mg_kg?: number | null;
+  smiles_string?: string | null;
 }
 
 export interface TimeSeriesData {

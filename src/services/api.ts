@@ -10,8 +10,11 @@ export const simulateDILI = async (payload: SimulationRequest): Promise<Simulati
   try {
     const response = await apiClient.post<SimulationResponse>('/simulate', payload);
     return response.data;
-  } catch (error) {
-    if (axios.isAxiosError(error) && !error.response) {
+  } catch (error: any) {
+    if (error.response && error.response.data) {
+      console.error("❌ FASTAPI VALIDATION ERROR:", JSON.stringify(error.response.data, null, 2));
+    } else {
+      console.error("❌ AXIOS ERROR:", error.message);
       // Mock fallback if backend is not running
       return mockSimulationResponse(payload);
     }
@@ -33,7 +36,7 @@ function mockSimulationResponse(payload: SimulationRequest): SimulationResponse 
   if (payload.mode === 'triase_umum') {
     return {
       mode: 'triase_umum',
-      input_smiles: payload.input_smiles || 'CC(=O)NC1=CC=C(O)C=C1',
+      input_smiles: payload.smiles_string || 'CC(=O)NC1=CC=C(O)C=C1',
       DILI_score: 0.82,
       model_confidence_note: 'skor berbasis model riset, bukan hasil uji klinis',
       affected_zone: 'Macro_Generic',
@@ -42,11 +45,11 @@ function mockSimulationResponse(payload: SimulationRequest): SimulationResponse 
     };
   }
 
-  const isParacetamol = payload.compound_name?.toLowerCase().includes('para') || payload.compound_name?.toLowerCase().includes('acetaminophen');
+  const isParacetamol = payload.compound_id?.toLowerCase() === 'paracetamol';
   
   return {
     mode: 'edukasi_mendalam',
-    compound_name: payload.compound_name || 'Parasetamol',
+    compound_name: isParacetamol ? 'Paracetamol' : 'Amoxicillin-Clavulanate',
     DILI_score: isParacetamol ? 0.95 : 0.65,
     model_confidence_note: 'PK/PD Model Simulation',
     affected_zone: isParacetamol ? 'Zone_3' : 'Portal_Periportal',
