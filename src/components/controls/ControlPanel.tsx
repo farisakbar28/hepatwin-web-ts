@@ -1,30 +1,43 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAppStore } from '../../state/store';
-import { Activity, Beaker, ServerCrash, Server } from 'lucide-react';
+import { Activity, Beaker, ServerCrash, Server, AlertCircle } from 'lucide-react';
 import type { SimulationRequest } from '../../types';
 
-export const ControlPanel: React.FC = () => {
+export function ControlPanel() {
   const { mode, setMode, connectionStatus, runSimulation, isSimulating } = useAppStore();
   
-  const [compound, setCompound] = useState('paracetamol');
+  const [compound, setCompound] = useState<'paracetamol' | 'amox_clav'>('paracetamol');
   const [dose, setDose] = useState(150);
   const [smiles, setSmiles] = useState('');
+  const [smilesError, setSmilesError] = useState('');
 
   const handleSimulate = () => {
-    // Sanitasi ketat untuk backend FastAPI (Pydantic)
-    // TypeScript strict compliant mapping
+    setSmilesError('');
+    
     const finalPayload: SimulationRequest = { mode };
+    
     if (mode === 'edukasi_mendalam') {
       finalPayload.compound_id = compound || 'paracetamol';
       finalPayload.dose_mg_kg = dose ? Number(dose) : 150;
       finalPayload.smiles_string = null;
     } else {
-      finalPayload.smiles_string = smiles || 'CC(=O)NC1=CC=C(O)C=C1';
+      if (!smiles.trim()) {
+        setSmilesError('SMILES tidak boleh kosong');
+        return;
+      }
+      
+      // Basic client-side validation
+      if (smiles.length < 2) {
+        setSmilesError('Notasi SMILES terlalu pendek');
+        return;
+      }
+      
+      finalPayload.smiles_string = smiles.trim();
       finalPayload.compound_id = null;
       finalPayload.dose_mg_kg = null;
     }
 
-    console.log("📤 SENDING SANITIZED PAYLOAD TO FASTAPI:", finalPayload);
+    console.log("🚀 SENDING SANITIZED PAYLOAD TO FASTAPI:", finalPayload);
     runSimulation(finalPayload);
   };
 
@@ -56,7 +69,7 @@ export const ControlPanel: React.FC = () => {
 
       <div className="flex bg-slate-800 p-1 rounded-lg mb-8">
         <button
-          onClick={() => setMode('edukasi_mendalam')}
+          onClick={() => { setMode('edukasi_mendalam'); setSmilesError(''); }}
           className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${mode === 'edukasi_mendalam' ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
         >
           Edukasi Mendalam
@@ -76,7 +89,7 @@ export const ControlPanel: React.FC = () => {
               <label className="block text-sm font-medium text-slate-300 mb-2">Senyawa Flagship</label>
               <select 
                 value={compound}
-                onChange={(e) => setCompound(e.target.value)}
+                onChange={(e) => setCompound(e.target.value as 'paracetamol' | 'amox_clav')}
                 className="w-full bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               >
                 <option value="paracetamol">Acetaminophen / Parasetamol</option>
@@ -104,10 +117,15 @@ export const ControlPanel: React.FC = () => {
               <label className="block text-sm font-medium text-slate-300 mb-2">Input SMILES</label>
               <textarea 
                 value={smiles}
-                onChange={(e) => setSmiles(e.target.value)}
+                onChange={(e) => { setSmiles(e.target.value); setSmilesError(''); }}
                 placeholder="Misal: CC(=O)NC1=CC=C(O)C=C1"
-                className="w-full h-32 bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-sm font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none resize-none"
+                className={`w-full h-32 bg-slate-800 border ${smilesError ? 'border-rose-500' : 'border-slate-700'} rounded-md py-2 px-3 text-sm font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none resize-none`}
               />
+              {smilesError && (
+                <p className="mt-2 text-xs text-rose-400 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" /> {smilesError}
+                </p>
+              )}
             </div>
           </div>
         )}
