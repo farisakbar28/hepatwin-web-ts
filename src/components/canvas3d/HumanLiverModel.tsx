@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { useEffect, useRef, useMemo } from 'react';
-import { useGLTF } from '@react-three/drei';
+import { useEffect, useRef, useMemo, useState } from 'react';
+import { useGLTF, useCursor } from '@react-three/drei';
 import type { GLTF } from 'three-stdlib';
 import { useFrame } from '@react-three/fiber';
 import type { ThreeEvent } from '@react-three/fiber';
@@ -21,10 +21,12 @@ const ZONES_DIR = {
 
 export function HumanLiverModel({ damageSeverity, affectedZone = 'Macro_Generic', visualPattern, onHotspotClick }: HumanLiverModelProps) {
   const group = useRef<THREE.Group>(null);
+  const [hovered, setHovered] = useState(false);
+  useCursor(hovered);
   
   const { scene } = useGLTF('/models/human_liver_hepatwin.glb') as unknown as GLTF;
 
-  const uniformsRef = useRef<{ [key: string]: { value: any } }>({
+  const uniformsRef = useRef<{ [key: string]: { value: number | THREE.Vector3 | THREE.Color } }>({
     uHeatmapCenter: { value: new THREE.Vector3(0, 0, 0) },
     uHeatmapRadius: { value: 0.0 },
     uHeatmapIntensity: { value: 0.0 },
@@ -217,28 +219,28 @@ export function HumanLiverModel({ damageSeverity, affectedZone = 'Macro_Generic'
        targetRadius = damageSeverity > 0.0 ? baseRadius : 0.0;
        
        uniformsRef.current.uHotspotActive.value = 1.0;
-       uniformsRef.current.uHotspotCenter.value.copy(surfaceData.Zone_3);
-       uniformsRef.current.uHotspotColor.value.set('#E24B4A'); 
+       (uniformsRef.current.uHotspotCenter.value as THREE.Vector3).copy(surfaceData.Zone_3);
+       (uniformsRef.current.uHotspotColor.value as THREE.Color).set('#E24B4A'); 
     } else if (visualPattern === 'portal_inflammation' || affectedZone === 'Portal_Periportal') {
        centerTarget = surfaceData.Portal_Periportal.clone();
        targetRadius = damageSeverity > 0.0 ? baseRadius * 1.2 : 0.0;
 
        uniformsRef.current.uHotspotActive.value = 1.0;
-       uniformsRef.current.uHotspotCenter.value.copy(surfaceData.Portal_Periportal);
-       uniformsRef.current.uHotspotColor.value.set('#EF9F27');
+       (uniformsRef.current.uHotspotCenter.value as THREE.Vector3).copy(surfaceData.Portal_Periportal);
+       (uniformsRef.current.uHotspotColor.value as THREE.Color).set('#EF9F27');
     }
 
     if (visualPattern === 'portal_inflammation' || affectedZone === 'Portal_Periportal') {
-      uniformsRef.current.uColorHighRisk.value.set('#EF9F27'); 
-      uniformsRef.current.uColorMedRisk.value.set('#5DCAA5');  
+      (uniformsRef.current.uColorHighRisk.value as THREE.Color).set('#EF9F27'); 
+      (uniformsRef.current.uColorMedRisk.value as THREE.Color).set('#5DCAA5');  
     } else {
-      uniformsRef.current.uColorHighRisk.value.set('#E24B4A'); 
-      uniformsRef.current.uColorMedRisk.value.set('#EF9F27');  
+      (uniformsRef.current.uColorHighRisk.value as THREE.Color).set('#E24B4A'); 
+      (uniformsRef.current.uColorMedRisk.value as THREE.Color).set('#EF9F27');  
     }
 
     const tl = gsap.timeline();
     
-    tl.to(uniformsRef.current.uHeatmapCenter.value, {
+    tl.to(uniformsRef.current.uHeatmapCenter.value as THREE.Vector3, {
       x: centerTarget.x,
       y: centerTarget.y,
       z: centerTarget.z,
@@ -292,9 +294,10 @@ export function HumanLiverModel({ damageSeverity, affectedZone = 'Macro_Generic'
           onClick={(e: ThreeEvent<MouseEvent>) => {
             if (!onHotspotClick || !showHotspots) return;
             
-            const activeCenter = uniformsRef.current.uHotspotCenter.value;
+            const activeCenter = uniformsRef.current.uHotspotCenter.value as THREE.Vector3;
             const dist = e.point.distanceTo(activeCenter);
-            const clickTolerance = uniformsRef.current.uHotspotRadius.value * 2.0;
+            const radius = uniformsRef.current.uHotspotRadius.value as number;
+            const clickTolerance = radius * 2.0;
 
             if (dist < clickTolerance) {
               e.stopPropagation();
@@ -304,16 +307,17 @@ export function HumanLiverModel({ damageSeverity, affectedZone = 'Macro_Generic'
           }}
           onPointerMove={(e: ThreeEvent<MouseEvent>) => {
             if (!showHotspots) return;
-            const activeCenter = uniformsRef.current.uHotspotCenter.value;
-            const hoverTolerance = uniformsRef.current.uHotspotRadius.value * 2.0;
+            const activeCenter = uniformsRef.current.uHotspotCenter.value as THREE.Vector3;
+            const radius = uniformsRef.current.uHotspotRadius.value as number;
+            const hoverTolerance = radius * 2.0;
 
             if (e.point.distanceTo(activeCenter) < hoverTolerance) {
-              document.body.style.cursor = 'pointer';
+              setHovered(true);
             } else {
-              document.body.style.cursor = 'auto';
+              setHovered(false);
             }
           }}
-          onPointerOut={() => { document.body.style.cursor = 'auto'; }}
+          onPointerOut={() => setHovered(false)}
         />
       </group>
     </group>

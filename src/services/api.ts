@@ -1,6 +1,7 @@
 import axios from 'axios';
 import type { AxiosError } from 'axios';
 import type { SimulationRequest, SimulationResponse } from '../types';
+import { processMockData } from './mockData';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -43,8 +44,10 @@ export const checkHealth = async (): Promise<boolean> => {
 
 // Mock response generation for Sprint 0 Placeholder when backend is off
 function mockSimulationResponse(payload: SimulationRequest): SimulationResponse {
+  const dose = payload.dose_mg_kg || 150;
+  
   if (payload.mode === 'triase_umum') {
-    return {
+    const rawRes = {
       mode: 'triase_umum',
       input_smiles: payload.smiles_string || 'CC(=O)NC1=CC=C(O)C=C1',
       dose_mg_kg: null,
@@ -53,19 +56,37 @@ function mockSimulationResponse(payload: SimulationRequest): SimulationResponse 
       damage_severity: 0.7,
       compound_class: 'unknown_general',
       model_confidence_note: 'skor berbasis model riset, bukan hasil uji klinis',
-      disclaimer_permanent: 'HASIL SIMULASI BUKAN DIAGNOSIS MEDIS.',
+      disclaimer_permanent: 'Skor ini adalah alat bantu triase/prioritisasi awal in-silico, BUKAN pengganti uji toksisitas/klinis pada senyawa apapun. Tidak ada satupun metode in-silico yang dapat menggantikan pengujian pada endpoint toksikologi kompleks (Madden et al., 2020).',
       disclaimer_hideable: false,
       affected_zone: 'Macro_Generic',
       supports_micro_zoom: false,
       explainability: ['Aromatic ring', 'Hydroxyl group'],
+      explainability_with_shap: [
+        { feature: 'gugus asetil ester', value: 0.21, percentage: 70 },
+        { feature: 'cincin aromatik tersubstitusi', value: 0.15, percentage: 50 }
+      ],
+      mock_probabilities: [
+        { label: 'Tidak toksik', value: 15, color: 'bg-slate-300' },
+        { label: 'Risiko rendah', value: 14, color: 'bg-green-500' },
+        { label: 'Risiko sedang', value: 63, color: 'bg-yellow-500' },
+        { label: 'Risiko tinggi', value: 8, color: 'bg-red-600' }
+      ],
+      triase_metrics: {
+        auc_range: '0.75-0.85',
+        sensitivity: 0.79,
+        specificity: 0.74,
+        accuracy: 0.631
+      },
       visual_pattern: 'heatmap_generik',
     };
+    const processed = processMockData(rawRes, dose);
+    if (!processed) throw new Error("Mock processing failed");
+    return processed;
   }
 
   const isParacetamol = payload.compound_id?.toLowerCase() === 'paracetamol';
-  const dose = payload.dose_mg_kg || 150;
   
-  return {
+  const rawRes2 = {
     mode: 'edukasi_mendalam',
     compound_name: isParacetamol ? 'Paracetamol' : 'Amoxicillin-Clavulanate',
     dose_mg_kg: dose,
@@ -79,15 +100,23 @@ function mockSimulationResponse(payload: SimulationRequest): SimulationResponse 
     affected_zone: isParacetamol ? 'Zone_3' : 'Portal_Periportal',
     supports_micro_zoom: true,
     explainability: isParacetamol ? ['NAPQI accumulation'] : ['Immune-mediated idiosyncratic'],
-    visual_pattern: isParacetamol ? 'centrilobular_necrosis' : 'portal_inflammation',
-    time_series_pkpd: isParacetamol ? [
-      { time: 0, concentration: 0, c_liver: 0, napqi: 0, gsh: 100, napqi_gsh_ratio: 0, threshold_exceeded: false },
-      { time: 4, concentration: 150, c_liver: 120, napqi: 20, gsh: 80, napqi_gsh_ratio: 0.4, threshold_exceeded: true },
-      { time: 12, concentration: 80, c_liver: 50, napqi: 60, gsh: 40, napqi_gsh_ratio: 1.2, threshold_exceeded: true },
-    ] : undefined,
-    nomogram_data: isParacetamol ? [
-      { time: 4, plasma_concentration: 150, rumack_line_150: 150, rumack_line_200: 200 },
-      { time: 12, plasma_concentration: 80, rumack_line_150: 67, rumack_line_200: 90 },
-    ] : undefined
+    explainability_with_shap: isParacetamol ? [
+        { feature: 'Cincin fenol', value: 0.45, percentage: 85 },
+        { feature: 'Gugus asetamida', value: 0.38, percentage: 70 }
+    ] : [
+        { feature: 'Cincin beta-laktam (amoxicillin)', value: 0.32, percentage: 75 },
+        { feature: 'Gugus klavulanat (asam oksazolidin)', value: 0.24, percentage: 55 }
+    ],
+    mock_probabilities: !isParacetamol ? [
+        { label: 'Tidak toksik', value: 15, color: 'bg-slate-300' },
+        { label: 'Risiko rendah', value: 14, color: 'bg-green-500' },
+        { label: 'Risiko sedang', value: 63, color: 'bg-yellow-500' },
+        { label: 'Risiko tinggi', value: 8, color: 'bg-red-600' }
+    ] : null,
+    visual_pattern: isParacetamol ? 'centrilobular_necrosis' : 'portal_inflammation'
   };
+  
+  const processed2 = processMockData(rawRes2, dose);
+  if (!processed2) throw new Error("Mock processing failed");
+  return processed2;
 }

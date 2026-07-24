@@ -14,7 +14,7 @@ export interface PKPDDataPoint {
 
 export interface NomogramDataPoint {
   time: number;
-  plasma_concentration: number;
+  plasma_concentration: number | null;
   rumack_line_150: number;
   rumack_line_200: number;
 }
@@ -24,6 +24,25 @@ export interface SimulationRequest {
   compound_id?: 'paracetamol' | 'amox_clav' | null;
   dose_mg_kg?: number | null;
   smiles_string?: string | null;
+}
+
+export interface ExplainabilityShap {
+  feature: string;
+  value: number;
+  percentage: number;
+}
+
+export interface MockProbability {
+  label: string;
+  value: number;
+  color: string;
+}
+
+export interface TriaseMetrics {
+  auc_range: string;
+  sensitivity: number;
+  specificity: number;
+  accuracy: number;
 }
 
 export interface SimulationResponse {
@@ -40,6 +59,9 @@ export interface SimulationResponse {
   disclaimer_hideable: boolean;
   affected_zone?: string | null;
   supports_micro_zoom: boolean;
+  explainability_with_shap?: ExplainabilityShap[] | null;
+  mock_probabilities?: MockProbability[] | null;
+  triase_metrics?: TriaseMetrics | null;
   explainability: string[];
   visual_pattern: string;
   time_series_pkpd?: PKPDDataPoint[] | null;

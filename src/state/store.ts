@@ -33,7 +33,7 @@ export const useAppStore = create<AppState>((set) => ({
     set({ isSimulating: true });
     try {
       const result = await simulateDILI(payload);
-      set({ simulationResult: result, isSimulating: false });
+      set({ simulationResult: { ...result }, isSimulating: false });
     } catch (error) {
       console.error('Simulation failed', error);
       set({ isSimulating: false });
