@@ -9,6 +9,19 @@ export const apiClient = axios.create({
   timeout: 10000,
 });
 
+export const fetchCompoundsAutocomplete = async (query: string, limit: number = 10) => {
+  try {
+    const response = await apiClient.get('/compounds/autocomplete', {
+      params: { q: query, limit }
+    });
+    return response.data;
+  } catch (err: unknown) {
+    const error = err as AxiosError;
+    console.error("Autocomplete fetch error:", error.message);
+    throw error;
+  }
+};
+
 export const simulateDILI = async (payload: SimulationRequest): Promise<SimulationResponse> => {
   try {
     const response = await apiClient.post<SimulationResponse>('/simulate', payload);

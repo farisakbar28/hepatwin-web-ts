@@ -8,6 +8,8 @@ export interface PatientCovariates {
 export interface CompoundSelection {
   hepatwin_id: string;
   compound_name: string;
+  dili_concern?: string | null;
+  is_simulatable: boolean;
 }
 
 export interface PKPDDataPoint {

@@ -1,21 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useAppStore } from '../../state/store';
 import type { SimulationRequest, CompoundSelection } from '../../types';
 import { MedicalDisclaimerModal } from '../modals/MedicalDisclaimerModal';
-
-// Mock list of 1231 compounds, we just provide a few for demonstration
-const mockCompounds: CompoundSelection[] = [
-  { hepatwin_id: 'paracetamol', compound_name: 'Paracetamol' },
-  { hepatwin_id: 'amoxicillin', compound_name: 'Amoxicillin' },
-  { hepatwin_id: 'ibuprofen', compound_name: 'Ibuprofen' },
-  { hepatwin_id: 'isoniazid', compound_name: 'Isoniazid' },
-  { hepatwin_id: 'rifampicin', compound_name: 'Rifampicin' }
-];
+import { CompoundAutocomplete } from './CompoundAutocomplete';
 
 export function ControlPanel() {
   const { connectionStatus, runSimulation, isSimulating } = useAppStore();
   
-  const [searchTerm, setSearchTerm] = useState('');
   const [selectedCompound, setSelectedCompound] = useState<CompoundSelection | null>(null);
   
   const [dose, setDose] = useState<number | ''>(150);
@@ -26,11 +17,6 @@ export function ControlPanel() {
 
   const [error, setError] = useState('');
   const [isDisclaimerModalOpen, setIsDisclaimerModalOpen] = useState(false);
-
-  const filteredCompounds = useMemo(() => {
-    if (!searchTerm) return [];
-    return mockCompounds.filter(c => c.compound_name.toLowerCase().includes(searchTerm.toLowerCase()));
-  }, [searchTerm]);
 
   const handleSimulateClick = () => {
     setError('');
@@ -74,34 +60,7 @@ export function ControlPanel() {
       {/* Simulation Setup */}
       <div>
         <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase mb-3">Pencarian Senyawa</h2>
-        <div className="relative">
-          <input 
-            type="text" 
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setSelectedCompound(null);
-            }}
-            placeholder="Ketik nama INN obat..."
-            className="w-full bg-white border border-slate-300 text-slate-800 text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block p-2.5 shadow-sm"
-          />
-          {filteredCompounds.length > 0 && !selectedCompound && (
-            <ul className="absolute z-10 w-full bg-white border border-slate-200 mt-1 max-h-40 overflow-y-auto rounded-lg shadow-lg">
-              {filteredCompounds.map(c => (
-                <li 
-                  key={c.hepatwin_id}
-                  onClick={() => {
-                    setSelectedCompound(c);
-                    setSearchTerm(c.compound_name);
-                  }}
-                  className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm text-slate-700"
-                >
-                  {c.compound_name}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <CompoundAutocomplete selectedCompound={selectedCompound} setSelectedCompound={setSelectedCompound} />
       </div>
 
       <hr className="border-slate-200" />
