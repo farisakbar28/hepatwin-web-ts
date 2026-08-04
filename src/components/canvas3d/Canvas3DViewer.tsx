@@ -4,7 +4,6 @@ import { OrbitControls, Environment } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { HumanLiverModel } from './HumanLiverModel';
 import { useAppStore } from '../../state/store';
-import type { AffectedZone } from '../../types';
 import gsap from 'gsap';
 import { ErrorBoundary } from 'react-error-boundary';
 import type { FallbackProps } from 'react-error-boundary';
@@ -31,29 +30,26 @@ function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
 }
 
 export function Canvas3DViewer() {
-  const { mode, simulationResult } = useAppStore();
-  const damageSeverity = simulationResult?.damage_severity || 0;
-  const affectedZone = (simulationResult?.affected_zone as AffectedZone) || 'Macro_Generic';
-  const visualPattern = simulationResult?.visual_pattern || 'heatmap_generik';
-  const compoundClass = simulationResult?.compound_class || 'dose_dependent';
-  const controlsRef = useRef<OrbitControlsImpl>(null);
+  const { simulationResult } = useAppStore();
+  
+  const damageSeverity = simulationResult?.DILI_probability || 0;
+  const riskLevel = simulationResult?.risk_level || 'low';
+  const affectedSegments = simulationResult?.affected_segments || [];
 
+  const isDiffuse = affectedSegments.includes('ALL_DIFFUSE') || affectedSegments.length === 0;
+
+  const controlsRef = useRef<OrbitControlsImpl>(null);
   const defaultCamPos = new THREE.Vector3(0, 0, 7);
   const defaultTarget = new THREE.Vector3(0, 0, 0);
 
-  const handleHotspotClick = (zone: string, worldPos?: THREE.Vector3) => {
+  const handleHotspotClick = (_zone: string, worldPos?: THREE.Vector3) => {
     if (!controlsRef.current || !worldPos) return;
     
     const target = controlsRef.current.target;
     const cameraPos = controlsRef.current.object.position;
     
     gsap.to(target, { x: worldPos.x, y: worldPos.y, z: worldPos.z, duration: 1.5, ease: "power2.inOut" });
-    
-    if (zone === 'Zone_3') {
-      gsap.to(cameraPos, { x: worldPos.x + 1.5, y: worldPos.y + 1.0, z: worldPos.z + 2.5, duration: 1.5, ease: "power2.inOut" });
-    } else if (zone === 'Portal_Periportal') {
-      gsap.to(cameraPos, { x: worldPos.x - 1.5, y: worldPos.y + 0.5, z: worldPos.z + 2.5, duration: 1.5, ease: "power2.inOut" });
-    }
+    gsap.to(cameraPos, { x: worldPos.x + 1.5, y: worldPos.y + 1.0, z: worldPos.z + 2.5, duration: 1.5, ease: "power2.inOut" });
   };
 
   const handleResetCamera = () => {
@@ -67,40 +63,21 @@ export function Canvas3DViewer() {
 
   return (
     <>
-      {/* Viewer Header Controls & Badges (with padding for visual spacing) */}
-      <div className="flex justify-between items-center z-10 absolute top-0 left-0 right-0 p-4 sm:p-6">
+      <div className="flex justify-between items-center z-10 absolute top-0 left-0 right-0 p-4 sm:p-6 pointer-events-none">
+          <div>
+              <span className="font-bold text-slate-800 text-sm drop-shadow-md">Anatomi 8 Segmen Couinaud</span>
+          </div>
           
-          {/* View Toggles (Makro/Mikro) */}
-          {mode === 'edukasi_mendalam' ? (
-            <div className="flex gap-2 items-center">
-                <button onClick={handleResetCamera} className="bg-blue-600 text-white border border-blue-600 shadow-sm rounded-full px-4 py-1.5 text-xs font-semibold transition-all">Makro</button>
-                <button className="bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 shadow-sm rounded-full px-4 py-1.5 text-xs font-semibold transition-all cursor-default opacity-50" disabled>Mikro (Lobulus)</button>
-            </div>
-          ) : (
-            <div>
-                <span className="font-bold text-slate-800 text-sm">Heatmap Risiko DILI Generik (Makro)</span>
-            </div>
-          )}
-          
-          {/* Badges */}
-          {mode === 'edukasi_mendalam' ? (
-            compoundClass === 'dose_dependent' ? (
-              <div className="bg-blue-50 text-blue-700 border border-blue-100 rounded-full px-3 py-1 text-[10px] font-bold tracking-wide uppercase">
-                  PK/PD + AI ESTIMASI
-              </div>
-            ) : (
-              <div className="bg-purple-600 text-white rounded-full px-3 py-1 text-[10px] font-bold tracking-wide uppercase">
-                  Digerakkan oleh AI
-              </div>
-            )
-          ) : (
-            <div className="bg-orange-100 text-orange-700 border border-orange-200 rounded-full px-3 py-1 text-[10px] font-bold tracking-wide uppercase">
-                Tanpa Peta Zonal
-            </div>
-          )}
+          <div className={`rounded-full px-3 py-1 text-[10px] font-bold tracking-wide uppercase ${
+              riskLevel === 'high' ? 'bg-red-100 text-red-700 border-red-200' :
+              riskLevel === 'medium' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
+              'bg-green-100 text-green-700 border-green-200'
+          } border`}>
+              {isDiffuse ? 'Seluruh Hati (Difus)' : `Segmen Terpengaruh: ${affectedSegments.join(', ')}`}
+          </div>
       </div>
 
-      {/* R3F Canvas - Zero Margin absolute fill */}
+      {/* R3F Canvas */}
       <div className="absolute inset-0 w-full h-full z-0">
         <ErrorBoundary FallbackComponent={ErrorFallback}>
           <Canvas shadows camera={{ position: defaultCamPos.toArray(), fov: 45 }} gl={{ alpha: true }}>
@@ -110,8 +87,8 @@ export function Canvas3DViewer() {
               <directionalLight position={[10, 10, 5]} intensity={1.5} castShadow />
               <HumanLiverModel 
                 damageSeverity={damageSeverity} 
-                affectedZone={affectedZone} 
-                visualPattern={visualPattern}
+                affectedZone={isDiffuse ? 'Macro_Generic' : 'Zone_3'} 
+                visualPattern={isDiffuse ? 'heatmap_generik' : 'centrilobular_necrosis'}
                 onHotspotClick={handleHotspotClick}
               />
             </Suspense>
@@ -130,27 +107,27 @@ export function Canvas3DViewer() {
         </ErrorBoundary>
       </div>
 
-      {/* Viewer Footer: Hints & Legends (with padding for visual spacing) */}
+      {/* Viewer Footer: Hints & Legends */}
       <div className="absolute right-6 top-1/2 -translate-y-1/2 z-10">
         <button 
           onClick={handleResetCamera}
-          className="flex flex-row items-center gap-1.5 text-slate-500 hover:text-blue-600 transition-colors bg-transparent border-none p-0 shadow-none"
+          className="flex flex-row items-center gap-1.5 text-slate-500 hover:text-blue-600 transition-colors bg-white/80 backdrop-blur rounded-full px-3 py-2 shadow-sm border border-slate-200"
         >
           <RefreshCw size={14} />
-          <span className="text-[10px] font-bold tracking-wide uppercase">Reset</span>
+          <span className="text-[10px] font-bold tracking-wide uppercase">Reset View</span>
         </button>
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 pointer-events-none z-10 flex flex-col justify-end">
-          <div className="flex justify-between items-end text-[11px] text-slate-400 mb-4 border-b border-slate-100 pb-4">
-              <span>model melayang bebas · drag untuk rotasi</span>
-              <span>{mode === 'triase_umum' ? 'seluruh permukaan menyala merata tanpa hotspot zonal' : 'klik hotspot untuk zoom mikro'}</span>
+          <div className="flex justify-between items-end text-[11px] text-slate-500 font-medium mb-4 border-b border-slate-200 pb-4">
+              <span className="bg-white/70 px-2 py-1 rounded">model melayang bebas · drag untuk rotasi</span>
+              <span className="bg-white/70 px-2 py-1 rounded">{isDiffuse ? 'seluruh permukaan menyala merata tanpa hotspot' : 'klik area berkedip untuk zoom in segmen'}</span>
           </div>
           
-          <div className="flex flex-wrap justify-center gap-6 sm:gap-10 text-[11px] sm:text-xs font-medium text-slate-500 bg-white/80 backdrop-blur-sm rounded-full py-2 px-4 w-max mx-auto shadow-sm">
-              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-green-500 flex-shrink-0"></div><span>Risiko rendah</span></div>
-              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-yellow-500 flex-shrink-0"></div><span>Risiko sedang</span></div>
-              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-600 flex-shrink-0"></div><span>Risiko tinggi / nekrosis</span></div>
+          <div className="flex flex-wrap justify-center gap-6 sm:gap-10 text-[11px] sm:text-xs font-bold text-slate-600 bg-white/90 backdrop-blur-md rounded-full py-2.5 px-6 w-max mx-auto shadow-md border border-slate-200">
+              <div className="flex items-center gap-2"><div className="w-3.5 h-3.5 rounded-full bg-[#5DCAA5] shadow-inner"></div><span>Risiko rendah</span></div>
+              <div className="flex items-center gap-2"><div className="w-3.5 h-3.5 rounded-full bg-[#EF9F27] shadow-inner"></div><span>Risiko sedang</span></div>
+              <div className="flex items-center gap-2"><div className="w-3.5 h-3.5 rounded-full bg-[#E24B4A] shadow-inner"></div><span>Risiko tinggi</span></div>
           </div>
       </div>
     </>

@@ -5,11 +5,10 @@ import type { GLTF } from 'three-stdlib';
 import { useFrame } from '@react-three/fiber';
 import type { ThreeEvent } from '@react-three/fiber';
 import gsap from 'gsap';
-import type { AffectedZone } from '../../types';
 
 interface HumanLiverModelProps {
   damageSeverity: number;
-  affectedZone?: AffectedZone;
+  affectedZone?: string;
   visualPattern?: string;
   onHotspotClick?: (zone: string, worldPos?: THREE.Vector3) => void;
 }
