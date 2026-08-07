@@ -1,24 +1,132 @@
 import axios from 'axios';
-import type { AxiosError } from 'axios';
-import type { SimulationRequest, SimulationResponse, PKPDDataPoint, ExplainabilityShap } from '../types';
+import type { AxiosError, AxiosRequestConfig } from 'axios';
+import type { AppApiError, AutocompleteResponse, HealthResponse, SimulationRequest, SimulationResponse } from '../types';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const BASE_URL = rawBaseUrl.replace(/\/+$/, '');
 
 export const apiClient = axios.create({
   baseURL: `${BASE_URL}/api/v1`,
-  timeout: 10000,
+  timeout: 8000,
 });
 
-export const fetchCompoundsAutocomplete = async (query: string, limit: number = 10) => {
+const healthClient = axios.create({
+  baseURL: BASE_URL,
+  timeout: 3000,
+});
+
+function extractMessage(detail: unknown): string | null {
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((item) => {
+        if (item && typeof item === 'object' && 'msg' in item) {
+          return String((item as { msg: unknown }).msg);
+        }
+        return null;
+      })
+      .filter(Boolean);
+    return messages.length > 0 ? messages.join('; ') : null;
+  }
+  return null;
+}
+
+export function toAppApiError(err: unknown): AppApiError {
+  if (!axios.isAxiosError(err)) {
+    return {
+      kind: 'unknown',
+      message: 'Terjadi kesalahan tidak dikenal. Silakan coba lagi.',
+      detail: err,
+    };
+  }
+
+  const error = err as AxiosError<{ detail?: unknown }>;
+  const status = error.response?.status;
+  const detail = error.response?.data?.detail;
+  const serverMessage = extractMessage(detail);
+
+  if (error.code === 'ECONNABORTED') {
+    return {
+      kind: 'timeout',
+      message: 'Permintaan melebihi batas waktu 5 detik. Silakan coba lagi.',
+      detail,
+    };
+  }
+
+  if (!error.response) {
+    return {
+      kind: 'network',
+      message: 'Tidak dapat terhubung ke backend. Periksa koneksi, URL API, atau CORS.',
+      detail: error.message,
+    };
+  }
+
+  if (status === 400) {
+    return {
+      kind: 'validation',
+      status,
+      message: serverMessage || 'Input tidak valid. Periksa kembali parameter simulasi.',
+      detail,
+    };
+  }
+
+  if (status === 422) {
+    return {
+      kind: 'validation',
+      status,
+      message: serverMessage || 'Senyawa bertipe biologik atau memiliki struktur yang tidak dapat disimulasikan.',
+      detail,
+    };
+  }
+
+  if (status === 404) {
+    return {
+      kind: 'not_found',
+      status,
+      message: serverMessage || 'Senyawa tidak tersedia dalam daftar simulasi HepaTwin.',
+      detail,
+    };
+  }
+
+  if (status === 503) {
+    return {
+      kind: 'unavailable',
+      status,
+      message: serverMessage || 'Layanan backend atau model AI sedang tidak tersedia.',
+      detail,
+    };
+  }
+
+  if (status && status >= 500) {
+    return {
+      kind: 'server',
+      status,
+      message: serverMessage || 'Terjadi gangguan server. Silakan coba lagi.',
+      detail,
+    };
+  }
+
+  return {
+    kind: 'unknown',
+    status,
+    message: serverMessage || 'Permintaan gagal. Silakan coba lagi.',
+    detail,
+  };
+}
+
+export const fetchCompoundsAutocomplete = async (
+  query: string,
+  limit: number = 10,
+  config?: AxiosRequestConfig
+): Promise<AutocompleteResponse> => {
   try {
-    const response = await apiClient.get('/compounds/autocomplete', {
-      params: { q: query, limit }
+    const response = await apiClient.get<AutocompleteResponse>('/compounds/autocomplete', {
+      ...config,
+      params: { q: query, limit, ...config?.params },
     });
     return response.data;
   } catch (err: unknown) {
-    const error = err as AxiosError;
-    console.error("Autocomplete fetch error:", error.message);
-    throw error;
+    throw toAppApiError(err);
   }
 };
 
@@ -27,57 +135,15 @@ export const simulateDILI = async (payload: SimulationRequest): Promise<Simulati
     const response = await apiClient.post<SimulationResponse>('/simulate', payload);
     return response.data;
   } catch (err: unknown) {
-    const error = err as AxiosError;
-    if (error.response && error.response.status === 422) {
-      console.error("❌ FASTAPI VALIDATION ERROR:", JSON.stringify(error.response.data, null, 2));
-      throw error;
-    } else {
-      console.error("❌ NETWORK/AXIOS ERROR, FALLING BACK TO MOCK:", error.message);
-      return mockSimulationResponse(payload);
-    }
+    throw toAppApiError(err);
   }
 };
 
 export const checkHealth = async (): Promise<boolean> => {
   try {
-    const healthClient = axios.create({
-      baseURL: BASE_URL,
-      timeout: 10000,
-    });
-    await healthClient.get('/health');
-    return true;
+    const response = await healthClient.get<HealthResponse>('/health');
+    return response.data.status === 'ok' && response.data.pkpd_engine_ready === true;
   } catch {
     return false;
   }
 };
-
-// Mock response generation for Sprint 0 Placeholder when backend is off
-function mockSimulationResponse(payload: SimulationRequest): SimulationResponse {
-  const dose = payload.dose_mg || 150;
-  const isParacetamol = payload.hepatwin_id?.toLowerCase() === 'paracetamol';
-  
-  // Create dummy time series
-  const time_series_pbpk: PKPDDataPoint[] = [];
-  for (let t = 0; t <= 24; t++) {
-    // Generate some fake curve
-    const c_liver = (dose / 100) * 10 * Math.exp(-Math.pow(t - 6, 2) / 20) + (Math.random() * 0.5);
-    time_series_pbpk.push({ time: t, c_liver: Math.max(0, c_liver) });
-  }
-
-  const explainability_shap: ExplainabilityShap[] = isParacetamol ? [
-    { feature: 'Cincin fenol', value: 0.45, percentage: 85 },
-    { feature: 'Gugus asetamida', value: 0.38, percentage: 70 }
-  ] : [
-    { feature: 'Gugus asetal', value: 0.22, percentage: 55 },
-    { feature: 'Cincin aromatik', value: 0.15, percentage: 40 }
-  ];
-
-  return {
-    compound_name: isParacetamol ? 'Paracetamol' : (payload.hepatwin_id || 'Unknown Compound'),
-    risk_level: isParacetamol ? 'high' : 'medium',
-    affected_segments: isParacetamol ? ['V', 'VI', 'VII', 'VIII'] : ['ALL_DIFFUSE'],
-    DILI_probability: isParacetamol ? 0.85 : 0.45,
-    time_series_pbpk,
-    explainability_shap
-  };
-}

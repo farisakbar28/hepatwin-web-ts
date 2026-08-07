@@ -1,8 +1,12 @@
 import { ControlPanel } from '../controls/ControlPanel';
 import { Canvas3DViewer } from '../canvas3d/Canvas3DViewer';
 import { AcademicDashboard } from '../dashboard/AcademicDashboard';
+import { useAppStore } from '../../state/store';
 
 export function MainLayout() {
+  const { simulationResult } = useAppStore();
+  const hasResult = Boolean(simulationResult);
+
   return (
     <div className="text-slate-800 antialiased min-h-screen flex flex-col font-sans bg-slate-50">
       
@@ -13,12 +17,25 @@ export function MainLayout() {
                   <img src="/logo-hepatwin.png" alt="HepaTwin Logo" className="w-8 h-8 object-contain flex-shrink-0" />
                   <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2">
                       <h1 className="font-bold text-lg leading-tight tracking-tight text-slate-900">HepaTwin</h1>
-                      <span className="text-xs sm:text-sm text-slate-400 font-medium hidden sm:inline-block">Simulasi Hepatotoksisitas Obat Berbasis AI</span>
-                      <span className="text-xs text-slate-400 font-medium sm:hidden">toksisitas hati</span>
+                      <span className="text-xs sm:text-sm text-slate-400 font-medium hidden sm:inline-block">Simulasi In-Silico 3D Liver untuk Prediksi Risiko Hepatotoksisitas</span>
+                      <span className="text-xs text-slate-400 font-medium sm:hidden">Simulasi In-Silico 3D Liver</span>
                   </div>
               </div>
-              <button className="border border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold text-sm px-4 py-1.5 rounded-full transition-colors">
-                  Bagikan
+              <button
+                className={`font-semibold text-xs sm:text-sm px-4 py-2 rounded-xl transition-colors shadow-sm ${
+                  hasResult
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
+                    : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                }`}
+                disabled={!hasResult}
+                title={hasResult ? 'Unduh Laporan Ringkasan Simulasi (PDF)' : 'Jalankan simulasi terlebih dahulu'}
+                onClick={() => {
+                  if (hasResult) {
+                    window.print();
+                  }
+                }}
+              >
+                Unduh Laporan PDF
               </button>
           </div>
       </header>

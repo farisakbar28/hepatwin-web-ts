@@ -10,6 +10,8 @@ interface HumanLiverModelProps {
   damageSeverity: number;
   affectedZone?: string;
   visualPattern?: string;
+  blinkingSpeed?: 'none' | 'slow' | 'fast';
+  visualColor?: 'green' | 'yellow' | 'red';
   onHotspotClick?: (zone: string, worldPos?: THREE.Vector3) => void;
 }
 
@@ -18,7 +20,13 @@ const ZONES_DIR = {
   Portal_Periportal: new THREE.Vector3(-0.8, 0, 0.5).normalize(),
 };
 
-export function HumanLiverModel({ damageSeverity, affectedZone = 'Macro_Generic', visualPattern, onHotspotClick }: HumanLiverModelProps) {
+const VISUAL_COLORS = {
+  green: '#5DCAA5',
+  yellow: '#EF9F27',
+  red: '#E24B4A',
+};
+
+export function HumanLiverModel({ damageSeverity, affectedZone = 'Macro_Generic', visualPattern, blinkingSpeed = 'none', visualColor = 'green', onHotspotClick }: HumanLiverModelProps) {
   const group = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
   useCursor(hovered);
@@ -229,13 +237,10 @@ export function HumanLiverModel({ damageSeverity, affectedZone = 'Macro_Generic'
        (uniformsRef.current.uHotspotColor.value as THREE.Color).set('#EF9F27');
     }
 
-    if (visualPattern === 'portal_inflammation' || affectedZone === 'Portal_Periportal') {
-      (uniformsRef.current.uColorHighRisk.value as THREE.Color).set('#EF9F27'); 
-      (uniformsRef.current.uColorMedRisk.value as THREE.Color).set('#5DCAA5');  
-    } else {
-      (uniformsRef.current.uColorHighRisk.value as THREE.Color).set('#E24B4A'); 
-      (uniformsRef.current.uColorMedRisk.value as THREE.Color).set('#EF9F27');  
-    }
+    const backendColor = VISUAL_COLORS[visualColor];
+    (uniformsRef.current.uColorHighRisk.value as THREE.Color).set(backendColor);
+    (uniformsRef.current.uColorMedRisk.value as THREE.Color).set(visualColor === 'green' ? '#5DCAA5' : '#EF9F27');
+    (uniformsRef.current.uHotspotColor.value as THREE.Color).set(backendColor);
 
     const tl = gsap.timeline();
     
@@ -262,7 +267,7 @@ export function HumanLiverModel({ damageSeverity, affectedZone = 'Macro_Generic'
     return () => {
       tl.kill();
     };
-  }, [damageSeverity, affectedZone, visualPattern, surfaceData, maxDim]);
+  }, [damageSeverity, affectedZone, visualPattern, visualColor, surfaceData, maxDim]);
 
   useEffect(() => {
     return () => {
@@ -280,7 +285,8 @@ export function HumanLiverModel({ damageSeverity, affectedZone = 'Macro_Generic'
   }, [clonedScene]);
 
   useFrame(({ clock }) => {
-    uniformsRef.current.uPulseTime.value = clock.elapsedTime;
+    const pulseMultiplier = blinkingSpeed === 'fast' ? 1.8 : blinkingSpeed === 'slow' ? 0.8 : 0.0;
+    uniformsRef.current.uPulseTime.value = clock.elapsedTime * pulseMultiplier;
   });
 
   const showHotspots = visualPattern === 'centrilobular_necrosis' || visualPattern === 'portal_inflammation';
