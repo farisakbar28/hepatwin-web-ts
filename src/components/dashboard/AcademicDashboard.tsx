@@ -142,8 +142,8 @@ export function AcademicDashboard() {
 
                     <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 lg:p-6 shadow-sm flex flex-col h-[380px] lg:h-[420px]">
                         <h3 className="text-[10px] font-bold text-blue-600 uppercase tracking-wide mb-1">Penjelasan Model AI (SHAP)</h3>
-                        <p className="text-sm lg:text-base font-bold text-slate-800 mb-2">Attribution komputasional fitur kimia</p>
-                        <p className="text-[11px] text-slate-500 mb-5">Attribution ini bukan bukti biokimia dan bukan dasar keputusan klinis.</p>
+                        <p className="text-sm lg:text-base font-bold text-slate-800 mb-2">Kontribusi komputasional fitur kimia</p>
+                        <p className="text-[11px] text-slate-500 mb-5">Kontribusi ini bukan bukti biokimia dan bukan dasar keputusan klinis.</p>
 
                         <div className="space-y-3 overflow-y-auto pr-1">
                             {simulationResult?.explainability_shap && simulationResult.explainability_shap.length > 0 ? (
@@ -154,7 +154,7 @@ export function AcademicDashboard() {
                                 ))
                             ) : (
                                 <div className="text-sm text-slate-500 italic border border-slate-100 p-4 rounded-lg bg-slate-50 text-center">
-                                    {isSimulating ? 'Menunggu attribution SHAP dari backend...' : 'Lakukan simulasi untuk melihat attribution fitur kimia.'}
+                                    {isSimulating ? 'Menunggu kontribusi SHAP dari backend...' : 'Lakukan simulasi untuk melihat kontribusi fitur kimia.'}
                                 </div>
                             )}
                         </div>
