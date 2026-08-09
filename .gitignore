@@ -28,6 +28,7 @@ dist-ssr
 # docs
 HepaTwin Draft Proposal GEMASTIK XIX 2026 Rev 2.md
 HepaTwin_PRD.md
+PLAN_3D_LIVER_MIGRATION.md
 # Environment Variables
 .env
 .env.*
