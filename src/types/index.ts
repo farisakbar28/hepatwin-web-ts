@@ -11,6 +11,17 @@ export interface AutocompleteResponse {
   results: CompoundSelection[];
 }
 
+/** Detail senyawa dari GET /api/v1/compounds/{hepatwin_id} (subset yang
+ *  dipakai frontend; skema penuh ada di backend app/models/schemas.py). */
+export interface CompoundDetail {
+  hepatwin_id: string;
+  compound_name: string;
+  dili_concern?: string | null;
+  is_simulatable: boolean;
+  /** Bobot molekul (Dalton). Dipakai guard ukuran molekul sebelum simulasi. */
+  molecular_weight?: number | null;
+}
+
 export type SexCode = 'L' | 'P';
 export type RiskLevel = 'low' | 'medium' | 'high';
 export type VisualColor = 'green' | 'yellow' | 'red';
@@ -18,6 +29,8 @@ export type BlinkingSpeed = 'none' | 'slow' | 'fast';
 export type ExposureCategory = 'LOW_EXPOSURE' | 'MODERATE_EXPOSURE' | 'HIGH_EXPOSURE';
 export type ModelStatus = 'trained' | 'unavailable' | null;
 export type SegmentMappingType = 'PEDAGOGICAL_HEURISTIC';
+export type HotspotIntensity = 'high' | 'low' | 'dim';
+export type HotspotDisplayMode = 'focal' | 'diffuse';
 
 export interface PatientCovariates {
   usia: number;
@@ -36,6 +49,11 @@ export interface PKPDDataPoint {
   time: number;
   c_plasma: number;
   c_hati: number;
+}
+
+export interface FusionThresholds {
+  t_low: number;
+  t_high: number;
 }
 
 export interface SimulationResponse {
@@ -66,6 +84,14 @@ export interface SimulationResponse {
   model_version?: string | null;
   model_status?: ModelStatus;
   score_is_calibrated?: boolean | null;
+  // --- F4/F7 (Fusion Layer backend master): backend SELALU mengirim field ini;
+  //     opsional di sisi frontend agar toleran terhadap backend lama / enum baru. ---
+  hotspot_intensity?: HotspotIntensity;
+  hotspot_display_mode?: HotspotDisplayMode;
+  evidence_note?: string | null;
+  fusion_reason?: string;
+  thresholds_used?: FusionThresholds;
+  timing_ms?: Record<string, number> | null;
 }
 
 export type AppApiErrorKind = 'validation' | 'not_found' | 'timeout' | 'network' | 'server' | 'unavailable' | 'unknown';

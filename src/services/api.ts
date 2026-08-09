@@ -1,6 +1,6 @@
 import axios from 'axios';
 import type { AxiosError, AxiosRequestConfig } from 'axios';
-import type { AppApiError, AutocompleteResponse, HealthResponse, SimulationRequest, SimulationResponse } from '../types';
+import type { AppApiError, AutocompleteResponse, CompoundDetail, HealthResponse, SimulationRequest, SimulationResponse } from '../types';
 
 const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const BASE_URL = rawBaseUrl.replace(/\/+$/, '');
@@ -124,6 +124,18 @@ export const fetchCompoundsAutocomplete = async (
       ...config,
       params: { q: query, limit, ...config?.params },
     });
+    return response.data;
+  } catch (err: unknown) {
+    throw toAppApiError(err);
+  }
+};
+
+export const fetchCompoundDetail = async (
+  hepatwinId: string,
+  config?: AxiosRequestConfig
+): Promise<CompoundDetail> => {
+  try {
+    const response = await apiClient.get<CompoundDetail>(`/compounds/${hepatwinId}`, config);
     return response.data;
   } catch (err: unknown) {
     throw toAppApiError(err);

@@ -4,16 +4,15 @@ import { simulateDILI, checkHealth } from '../services/api';
 
 export type ConnectionStatus = 'Loading' | 'Connected' | 'Disconnected';
 
-type ResultSource = 'backend' | null;
-
 interface AppState {
   connectionStatus: ConnectionStatus;
   isSimulating: boolean;
   simulationResult: SimulationResponse | null;
   simulationError: AppApiError | null;
-  resultSource: ResultSource;
   activeRequestId: number;
   disclaimerConsented: boolean;
+  /** hepatwin_id dari upaya simulasi terakhir -- konteks pesan error (mis. senyawa berukuran besar) di banner dashboard. */
+  lastSimulationHepatwinId: string | null;
 
   checkConnection: () => Promise<void>;
   runSimulation: (payload: SimulationRequest) => Promise<void>;
@@ -26,9 +25,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   isSimulating: false,
   simulationResult: null,
   simulationError: null,
-  resultSource: null,
   activeRequestId: 0,
   disclaimerConsented: false,
+  lastSimulationHepatwinId: null,
 
   checkConnection: async () => {
     set({ connectionStatus: 'Loading' });
@@ -43,7 +42,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       isSimulating: true,
       simulationError: null,
       simulationResult: null,
-      resultSource: null,
+      lastSimulationHepatwinId: payload.hepatwin_id,
     });
 
     try {
@@ -51,7 +50,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (get().activeRequestId !== requestId) return;
       set({
         simulationResult: result,
-        resultSource: 'backend',
         isSimulating: false,
         simulationError: null,
       });
@@ -60,7 +58,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({
         simulationError: error as AppApiError,
         simulationResult: null,
-        resultSource: null,
         isSimulating: false,
       });
       void get().checkConnection();

@@ -18,10 +18,10 @@ interface CouinaudLiverModelProps {
 /**
  * Model 3D hati Couinaud (human_liver_couinaud_final.glb).
  *
- * - R-01: TIDAK menyentuh `pbr_material` sama sekali. Highlight HANYA lewat overlay
- *   bola prosedural (IcosahedronGeometry) di posisi anchor hotspot glTF.
- * - TIDAK ada clone scene, TIDAK ada shader mutation, TIDAK ada raycast mock.
- * - Posisi hotspot dibaca dari node glTF `Hotspot_Segment_X` via getWorldPosition().
+ * Highlight TIDAK menyentuh `pbr_material` sama sekali — hanya lewat overlay bola
+ * prosedural (IcosahedronGeometry) di posisi anchor hotspot glTF. Tanpa clone scene,
+ * tanpa shader mutation, tanpa raycast mock. Posisi hotspot dibaca dari node glTF
+ * `Hotspot_Segment_X` via getWorldPosition().
  */
 export function CouinaudLiverModel({ simulationResult, onHotspotClick, onHotspotHover }: CouinaudLiverModelProps) {
   const { scene } = useGLTF(MODEL_URL) as unknown as GLTF;
@@ -32,7 +32,7 @@ export function CouinaudLiverModel({ simulationResult, onHotspotClick, onHotspot
     const boxCenter = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
     const maxDimension = Math.max(size.x, size.y, size.z);
-    // R-05: model ~0.22m -> target viewport ~4.0m (bukan 100x).
+    // Model ~0.22 m -> target viewport ~4.0 m.
     const targetSize = 4.0;
     return { center: boxCenter, modelScale: maxDimension > 0 ? targetSize / maxDimension : 1 };
   }, [scene]);
@@ -54,7 +54,7 @@ export function CouinaudLiverModel({ simulationResult, onHotspotClick, onHotspot
       }
     });
 
-    // R-06: mitigasi silent-fail — jika anchor glTF tidak ditemukan (mis. node direname),
+    // Mitigasi silent-fail: jika anchor glTF tidak ditemukan (mis. node di-rename),
     // beri jejak di console agar tidak tampil seolah-olah normal tanpa hotspot.
     if (anchors.length === 0) {
       console.warn('[CouinaudLiverModel] Tidak ditemukan node anchor hotspot glTF (Hotspot_Segment_I..VIII). Hotspot tidak akan dirender.');
@@ -76,7 +76,7 @@ export function CouinaudLiverModel({ simulationResult, onHotspotClick, onHotspot
   return (
     <group scale={modelScale}>
       <group position={[-center.x, -center.y, -center.z]}>
-        {/* R-01: primitive original, NO clone, NO material mutation */}
+        {/* Primitive original: tanpa clone, tanpa mutasi material */}
         <primitive object={scene} />
         {visibleAnchors.map((anchor) => (
           <HotspotOverlay
@@ -86,6 +86,7 @@ export function CouinaudLiverModel({ simulationResult, onHotspotClick, onHotspot
             color={hotspotColor}
             periodMs={blinkPeriodMs}
             dimmed={visual.isFallbackNoEvidence}
+            intensity={visual.hotspotIntensity}
             onClick={onHotspotClick}
             onHover={onHotspotHover}
           />

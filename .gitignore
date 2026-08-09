@@ -6,8 +6,6 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-opencode.json
-/aset dan desain/
 
 node_modules
 dist
@@ -25,12 +23,14 @@ dist-ssr
 *.sln
 *.sw?
 
-# docs
-HepaTwin Draft Proposal GEMASTIK XIX 2026 Rev 2.md
+# Agent configuration (local tooling, tracked file — tetap di-ignore agar tidak
+# ter-re-add bila terhapus)
+opencode.json
+
+# Product documentation kept local (tidak ikut ter-deploy ke Vercel)
 HepaTwin_PRD.md
-PLAN_3D_LIVER_MIGRATION.md
+
 # Environment Variables
 .env
 .env.*
 !.env.example
-HepaTwin_Draft_Proposal_GEMASTIK_XIX_2026.md

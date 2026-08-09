@@ -3,6 +3,12 @@ import { useAppStore } from '../../state/store';
 import type { SimulationRequest, CompoundSelection, SexCode } from '../../types';
 import { MedicalDisclaimerModal } from '../modals/MedicalDisclaimerModal';
 import { CompoundAutocomplete } from './CompoundAutocomplete';
+import {
+  LARGE_MOLECULE_PREVENTED_MESSAGE,
+  TOO_LARGE_MOLECULAR_WEIGHT_DALTON,
+  getCompoundMolecularWeight,
+  largeMoleculeErrorMessageFor,
+} from '../../services/compoundMeta';
 
 const mapGenderToSexCode = (gender: 'M' | 'F'): SexCode => gender === 'M' ? 'L' : 'P';
 
@@ -18,10 +24,11 @@ export function ControlPanel() {
   const [height, setHeight] = useState<number | ''>(170);
 
   const [error, setError] = useState('');
+  const [isCheckingCompound, setIsCheckingCompound] = useState(false);
   const [pendingPayload, setPendingPayload] = useState<SimulationRequest | null>(null);
   const [isDisclaimerModalOpen, setIsDisclaimerModalOpen] = useState(false);
 
-  const handleSimulateClick = () => {
+  const handleSimulateClick = async () => {
     setError('');
     clearSimulationError();
 
@@ -57,6 +64,21 @@ export function ControlPanel() {
       },
     };
 
+    // Guard ukuran molekul: senyawa bermolekul sangat besar (peptida/biologik)
+    // dapat membuat backend live mengirim error (gateway 502) karena tidak
+    // sanggup diproses. Dicegah SEBELUM request dikirim supaya pengguna
+    // mendapat pesan yang jelas & ramah, bukan error server generik.
+    setIsCheckingCompound(true);
+    try {
+      const mw = await getCompoundMolecularWeight(selectedCompound.hepatwin_id);
+      if (mw !== null && mw > TOO_LARGE_MOLECULAR_WEIGHT_DALTON) {
+        setError(LARGE_MOLECULE_PREVENTED_MESSAGE);
+        return;
+      }
+    } finally {
+      setIsCheckingCompound(false);
+    }
+
     if (disclaimerConsented) {
       void runSimulation(payload);
     } else {
@@ -71,6 +93,11 @@ export function ControlPanel() {
     void runSimulation(pendingPayload);
     setPendingPayload(null);
   };
+
+  // Pesan error: fallback ramah khusus molekul besar bila error server datang
+  // untuk senyawa berukuran besar -- logika terpusat di compoundMeta agar
+  // konsisten dengan banner error di dashboard.
+  const displayedSimulationError = largeMoleculeErrorMessageFor(simulationError, selectedCompound?.hepatwin_id);
 
   const connectionLabel = connectionStatus === 'Connected'
     ? 'Terhubung ke Backend AI/PBPK'
@@ -158,14 +185,14 @@ export function ControlPanel() {
         </div>
 
         {error && <p className="text-[10px] text-rose-500 mt-1 mb-2">{error}</p>}
-        {simulationError && <p className="text-[10px] text-rose-600 mt-1 mb-2 bg-rose-50 border border-rose-100 rounded-lg p-2">{simulationError.message}</p>}
+        {simulationError && <p className="text-[10px] text-rose-600 mt-1 mb-2 bg-rose-50 border border-rose-100 rounded-lg p-2">{displayedSimulationError}</p>}
 
         <button
           onClick={handleSimulateClick}
-          disabled={isSimulating || connectionStatus === 'Loading'}
+          disabled={isSimulating || connectionStatus === 'Loading' || isCheckingCompound}
           className="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-bold rounded-xl text-sm px-5 py-3 text-center transition-colors shadow-sm disabled:opacity-50 mt-2"
         >
-          {isSimulating ? 'Memproses...' : 'Simulasikan Toksisitas'}
+          {isCheckingCompound ? 'Memeriksa senyawa...' : isSimulating ? 'Memproses...' : 'Simulasikan Toksisitas'}
         </button>
       </div>
 

@@ -3,18 +3,29 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { ThreeEvent } from '@react-three/fiber';
 import { useCursor } from '@react-three/drei';
+import type { HotspotIntensity } from '../../types';
 
 /**
- * Koreksi #1: fallback no-evidence (Fallback_Diffuse) dirender LEBIH REDUP
- * dibanding kondisi normal (Mixed asli / partial) — prinsip anti-halusinasi medis (PRD 8.3).
- * Nilai konsisten: seluruh parameter hotspot normal dikali DIM_FACTOR.
+ * Fallback no-evidence (Fallback_Diffuse) dirender LEBIH REDUP dibanding kondisi
+ * normal — prinsip anti-halusinasi medis (PRD 8.3). Seluruh parameter hotspot
+ * normal dikali DIM_FACTOR.
  */
 const DIM_FACTOR = 0.5;
 
 /**
- * Radius bola hotspot (meter, dalam ruang model sebelum scale group).
- * FIX 1: setengah dari nilai sebelumnya 0.015 -> 0.0075 (≈7,5 mm pada liver ~22 cm).
- * Satu sumber kebenaran — perubahan ukuran berikutnya cukup edit konstanta ini.
+ * Pemetaan hotspot_intensity -> faktor emissive material.
+ * "dim" = bukti lokalisasi lemah (redup), "low" = sedang, "high" = kuat.
+ * Nilai tak dikenal dinormalisasi menjadi "high" oleh deriveSimulationVisual.
+ */
+const INTENSITY_EMISSIVE: Record<HotspotIntensity, number> = {
+  high: 1.0,
+  low: 0.65,
+  dim: 0.4,
+};
+
+/**
+ * Radius bola hotspot (meter, dalam ruang model sebelum scale group):
+ * 0.0075 m ≈ 7,5 mm pada liver ~22 cm. Satu sumber kebenaran — cukup edit di sini.
  */
 const HOTSPOT_RADIUS = 0.0075;
 
@@ -24,18 +35,20 @@ interface HotspotOverlayProps {
   color: THREE.Color;
   /** null = "none" (tidak ada animasi), selain itu periode siklus kedip dalam ms. */
   periodMs: number | null;
-  /** Koreksi #1: true untuk kasus Fallback_Diffuse -> redup. */
+  /** true untuk kasus Fallback_Diffuse -> redup. */
   dimmed: boolean;
+  /** Intensitas bukti lokalisasi dari backend (hotspot_intensity). Default 'high'. */
+  intensity?: HotspotIntensity;
   onClick?: (segmentRoman: string, worldPos?: THREE.Vector3, screenX?: number, screenY?: number) => void;
-  /** Screen-space position di-pass agar tooltip bisa mengikuti kursor (FIX 2). */
+  /** Screen-space position di-pass agar tooltip bisa mengikuti kursor. */
   onHover?: (segmentRoman: string | null, screenX?: number, screenY?: number) => void;
 }
 
 /**
- * Overlay bola prosedural per segmen Couinaud (R-01: highlight HANYA lewat overlay,
+ * Overlay bola prosedural per segmen Couinaud (highlight HANYA lewat overlay,
  * TIDAK menyentuh pbr_material model).
  */
-export function HotspotOverlay({ segmentRoman, position, color, periodMs, dimmed, onClick, onHover }: HotspotOverlayProps) {
+export function HotspotOverlay({ segmentRoman, position, color, periodMs, dimmed, intensity = 'high', onClick, onHover }: HotspotOverlayProps) {
   const [hovered, setHovered] = useState(false);
   useCursor(hovered);
 
@@ -44,12 +57,12 @@ export function HotspotOverlay({ segmentRoman, position, color, periodMs, dimmed
   const material = useMemo(
     () =>
       new THREE.MeshPhysicalMaterial({
-        // Hotspot harus tampak BERWARNA sesuai visual_color (Koreksi #2),
-        // bukan putih pudar: diffuse + emissive sama-sama memakai warna terpetakan.
+        // Hotspot tampak BERWARNA sesuai visual_color (bukan putih pudar):
+        // diffuse + emissive sama-sama memakai warna terpetakan.
         color: color.clone(),
         emissive: color.clone(),
-        // Koreksi #1: fallback no-evidence -> emissiveIntensity LEBIH RENDAH (redup).
-        emissiveIntensity: dimmed ? 0.4 : 1.0,
+        // emissiveIntensity mengikuti hotspot_intensity backend (dim -> redup).
+        emissiveIntensity: INTENSITY_EMISSIVE[intensity],
         transparent: true,
         opacity: dimmed ? 0.7 * DIM_FACTOR : 0.7,
         roughness: 0.3,
@@ -58,7 +71,7 @@ export function HotspotOverlay({ segmentRoman, position, color, periodMs, dimmed
         depthWrite: false,
         side: THREE.FrontSide,
       }),
-    [color, dimmed]
+    [color, dimmed, intensity]
   );
 
   const geometry = useMemo(() => new THREE.IcosahedronGeometry(HOTSPOT_RADIUS, 2), []);
@@ -72,7 +85,7 @@ export function HotspotOverlay({ segmentRoman, position, color, periodMs, dimmed
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
-    // FIX 2: ikutkan posisi layar agar klik juga bisa menampilkan tooltip label segmen (V-09)
+    // Ikutkan posisi layar agar klik juga menampilkan tooltip label segmen.
     onClick?.(segmentRoman, e.point, e.clientX, e.clientY);
   };
 
@@ -82,9 +95,8 @@ export function HotspotOverlay({ segmentRoman, position, color, periodMs, dimmed
     onHover?.(segmentRoman, e.clientX, e.clientY);
   };
 
-  // FIX 2: update posisi tooltip mengikuti kursor selama masih di atas hotspot.
-  // Tanpa guard `hovered`: R3F hanya memanggil onPointerMove pada objek yang sedang
-  // berada di bawah kursor, dan menghindari stale-closure yang bisa drop satu update.
+  // Update posisi tooltip mengikuti kursor selama masih di atas hotspot (R3F
+  // memanggil onPointerMove hanya untuk objek yang berada di bawah kursor).
   const handlePointerMove = (e: ThreeEvent<PointerEvent>) => {
     onHover?.(segmentRoman, e.clientX, e.clientY);
   };
@@ -94,7 +106,7 @@ export function HotspotOverlay({ segmentRoman, position, color, periodMs, dimmed
     onHover?.(null);
   };
 
-  // Blink animation — Koreksi #2: "none"=NO anim / "slow"=4000ms / "fast"=1000ms
+  // Blink animation: "none"=tanpa anim / "slow"=4000ms / "fast"=1000ms
   useFrame(({ clock }) => {
     const mat = materialRef.current;
     if (!mat) return;

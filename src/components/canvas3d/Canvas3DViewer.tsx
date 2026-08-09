@@ -43,13 +43,12 @@ export function Canvas3DViewer() {
 
   const controlsRef = useRef<OrbitControlsImpl>(null);
 
-  // FIX 2: tooltip info segmen MENGIKUTI KURSOR (bukan panel tetap di kanan atas).
-  // State berisi segmen + posisi layar (clientX/Y) dari event pointer hotspot.
+  // Tooltip label segmen mengikuti kursor: state berisi segmen + posisi layar
+  // (clientX/Y) dari event pointer hotspot.
   const [hoverState, setHoverState] = useState<{ segment: string; x: number; y: number } | null>(null);
 
   const handleHotspotClick = (segmentRoman: string, worldPos?: THREE.Vector3, screenX?: number, screenY?: number) => {
-    // V-09: klik hotspot -> kamera fokus. Label segmen tetap tampil (kini sebagai
-    // tooltip di posisi kursor, bukan panel tetap). Perilaku kamera TIDAK berubah.
+    // Klik hotspot -> kamera fokus. Label segmen tampil sebagai tooltip di posisi kursor.
     if (screenX !== undefined && screenY !== undefined) {
       setHoverState({ segment: segmentRoman, x: screenX, y: screenY });
     }
@@ -87,8 +86,7 @@ export function Canvas3DViewer() {
   };
 
   const hasSegments = visual.affectedSegments.length > 0;
-  // Phase 2-5 plan: simulationResult === null -> model only, NO defaults.
-  // Badge hanya dirender saat sudah ada hasil simulasi.
+  // Badge hanya dirender saat sudah ada hasil simulasi (simulationResult !== null).
   const badgeText = visual.isDiffuse
     ? 'Seluruh Hati (Difus)'
     : hasSegments
@@ -108,7 +106,7 @@ export function Canvas3DViewer() {
       <div className="flex justify-between items-start gap-2 z-10 absolute top-0 left-0 right-0 p-3 sm:p-4 lg:p-6 pointer-events-none">
         <div className="min-w-0">
           <span className="font-bold text-slate-800 text-xs sm:text-sm drop-shadow-md">Anatomi 8 Segmen Couinaud</span>
-          {/* Koreksi #3: label segment_mapping_type DINAMIS dari backend, bukan hardcode */}
+          {/* Label segment_mapping_type dinamis dari backend (bukan hardcode) */}
           {simulationResult?.segment_mapping_type && (
             <p className="text-[9px] sm:text-[10px] text-slate-500 mt-1 bg-white/80 rounded px-1.5 sm:px-2 py-1 max-w-[92vw] sm:max-w-md break-words leading-snug">
               Pemetaan segmen: <span className="font-semibold text-slate-600">{labelOrRaw(segmentMappingTypeLabel, simulationResult.segment_mapping_type)}</span>
@@ -130,9 +128,12 @@ export function Canvas3DViewer() {
               {badgeText}
             </div>
           )}
-          {/* Koreksi #1: label eksplisit "evidence unavailable" saat fallback no-monograf */}
+          {/* Label eksplisit "evidence unavailable" saat fallback tanpa monograf */}
           {visual.isFallbackNoEvidence && (
-            <div className="rounded-lg px-2.5 sm:px-3 py-1 text-[9px] sm:text-[10px] font-bold tracking-wide uppercase bg-slate-800 text-amber-300 border border-slate-700 text-right max-w-[65vw] sm:max-w-md leading-tight">
+            <div
+              title={visual.evidenceNote ?? 'Pola cedera spesifik tidak tersedia di data kurasi'}
+              className="rounded-lg px-2.5 sm:px-3 py-1 text-[9px] sm:text-[10px] font-bold tracking-wide uppercase bg-slate-800 text-amber-300 border border-slate-700 text-right max-w-[65vw] sm:max-w-md leading-tight"
+            >
               Pola cedera tidak tersedia (evidence unavailable)
             </div>
           )}
@@ -168,9 +169,8 @@ export function Canvas3DViewer() {
         </ErrorBoundary>
       </div>
 
-      {/* FIX 2: tooltip mengikuti kursor — posisi fixed di clientX/Y + offset 14px,
-          pointer-events-none agar tidak mengganggu interaksi canvas/hotspot.
-          Hilang otomatis saat pointer keluar hotspot (onPointerOut) / keluar kanvas. */}
+      {/* Tooltip mengikuti kursor: posisi fixed di clientX/Y + offset 14px, pointer-events-none
+          agar tidak mengganggu interaksi canvas/hotspot. Hilang saat pointer keluar hotspot/kanvas. */}
       {hoverState && (
         <div
           className="pointer-events-none fixed z-50 bg-slate-800 text-white rounded-full px-3 py-1.5 text-[11px] font-bold shadow-md border border-white/20"

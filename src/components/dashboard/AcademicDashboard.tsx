@@ -1,6 +1,7 @@
 import { useAppStore } from '../../state/store';
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { MedicalDisclaimerFooter } from '../common/MedicalDisclaimerFooter';
+import { largeMoleculeErrorMessageFor } from '../../services/compoundMeta';
 import { MODEL_UNAVAILABLE_LABEL, exposureCategoryLabel, injuryPatternLabel, labelOrRaw, riskPriorityLabel, shapGroupLabel } from '../../constants/labels';
 
 import type { TooltipProps } from 'recharts';
@@ -12,7 +13,7 @@ type CustomTooltipProps = TooltipProps<ValueType, NameType> & {
 };
 
 export function AcademicDashboard() {
-    const { simulationResult, isSimulating, simulationError } = useAppStore();
+    const { simulationResult, isSimulating, simulationError, lastSimulationHepatwinId } = useAppStore();
     const hasSeries = Boolean(simulationResult?.time_series_pbpk?.length);
 
     const PKPDTooltip = ({ active, payload, label }: CustomTooltipProps) => {
@@ -40,7 +41,7 @@ export function AcademicDashboard() {
             <div className="w-full fade-in">
                 {simulationError && (
                     <div className="mb-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-4 text-sm">
-                        {simulationError.message}
+                        {largeMoleculeErrorMessageFor(simulationError, lastSimulationHepatwinId)}
                     </div>
                 )}
 
@@ -67,7 +68,7 @@ export function AcademicDashboard() {
                                 <p className="text-sm font-bold text-slate-800">{riskPriorityLabel[simulationResult.risk_level]}</p>
                             </div>
                             <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-                                <p className="text-[10px] uppercase tracking-wide font-bold text-slate-400">Kategori Paparan (In-Silico)</p>
+                                <p className="text-[10px] uppercase tracking-wide font-bold text-slate-400">Kategori Paparan</p>
                                 <p className="text-sm font-bold text-slate-800">{exposureCategoryLabel[simulationResult.exposure_category]}</p>
                             </div>
                             <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
