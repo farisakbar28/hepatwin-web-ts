@@ -9,18 +9,18 @@ Dikembangkan untuk **GEMASTIK XIX / 2026** (Kompetisi VIII: Pengembangan Perangk
 ## 🌟 Fitur Utama (Frontend & Integrasi)
 
 1. **Pencarian Autocomplete Senyawa Terkurasi (Zero-Mock):**
-   - Mengambil data senyawa `is_simulatable = TRUE` dari 1.231 senyawa DILIrank 2.0 via backend (`GET /api/v1/compounds/search`).
-   - Fitur pencarian dengan debouncing 300ms, keyboard navigation, dan fallback offline deterministik.
+   - Mengambil data senyawa `is_simulatable = TRUE` dari 1.231 senyawa DILIrank 2.0 via backend (`GET /api/v1/compounds/autocomplete?q={query}&limit={n}`).
+   - Fitur pencarian dengan debouncing 300ms, keyboard navigation, cache TTL 1 jam, dan fallback offline deterministik.
 
 2. **Visualisasi Anatomi 3D Couinaud Interaktif:**
    - Render WebGL 3D Anatomi Hati 8 Segmen Couinaud (`.glb`) menggunakan **React Three Fiber** & **Three.js**.
-   - Custom GLSL Heatmap Shader & Blinking Hotspot Overlay (Warna Hijau/Kuning/Merah & Kecepatan Kedip None/Slow/Fast) berdasarkan keputusan Lapisan Fusi backend.
-   - Penandaan transparan `PEDAGOGICAL_HEURISTIC` (heuristik pedagogis makrovaskular, bukan lokalisasi histologis klinis).
+   - Blinking Hotspot Overlay bola prosedural semitransparan (Warna Hijau/Kuning/Merah & Kecepatan Kedip None/Slow/Fast) berdasarkan keputusan Lapisan Fusi backend.
+   - Label pemetaan segmen user-facing "Heuristik pedagogis (panduan visual, bukan lokasi klinis)" — heuristik visual pedagogis, **bukan** lokalisasi histologis klinis.
 
 3. **Dasbor Tiga Panel Terintegrasi:**
    - **Panel Kiri:** Form Input Senyawa (INN), Dosis Bolus Tunggal (mg), dan Kovariat Pasien (Usia, Jenis Kelamin L/P, Berat Badan, Tinggi Badan).
    - **Panel Kanan:** Kanvas 3D WebGL (OrbitControls, rotasi 360°, zoom, reset view).
-   - **Panel Bawah:** Grafik Kurva Paparan Temporal $C_{\text{hati}}(t)$ vs $C_{\text{plasma}}(t)$ 24 jam & Visualisasi Explainability SHAP (*toxicophore highlighting*).
+   - **Panel Bawah:** Kartu ringkasan hasil (Probabilitas DILI, Prioritas, Kategori Paparan, Pola Cedera), Grafik Kurva Paparan Konsentrasi di Hati (24 Jam), & Visualisasi Explainability SHAP (*toxicophore highlighting*).
 
 4. **Kepatuhan Medical Disclaimer & CoU (PRD v2.3 & FDA CM&S):**
    - Modal Disclaimer Checklist wajib 3 poin persetujuan sebelum simulasi dijalankan.
@@ -31,7 +31,7 @@ Dikembangkan untuk **GEMASTIK XIX / 2026** (Kompetisi VIII: Pengembangan Perangk
 
 ## 🛠️ Stack Teknologi
 
-- **Framework:** React 18 + TypeScript + Vite
+- **Framework:** React 19 + TypeScript + Vite
 - **Styling:** Tailwind CSS + Lucide React
 - **3D Engine:** React Three Fiber (`@react-three/fiber`), `@react-three/drei`, Three.js
 - **State Management:** Zustand (`src/state/store.ts`)
@@ -77,9 +77,9 @@ Hasil build statis akan dibuat di folder `dist/`.
 
 Frontend terintegrasi penuh dengan backend FastAPI (`C:\My Project\hepatwin-backend-py`):
 
-1. **`GET /api/v1/health`** — Pemeriksaan status kesehatan backend & engine AI/PBPK.
-2. **`GET /api/v1/compounds/search?q={query}`** — Kueri autocomplete 1.231 senyawa simulatable DILIrank 2.0.
-3. **`POST /api/v1/simulate`** — Mengirim payload dosis, senyawa, & 4 kovariat alometrik; menerima $P_{\text{DILI}}$, visual color/blinking, segmen Couinaud, curve time series 24j, dan SHAP.
+1. **`GET /health`** — Pemeriksaan status kesehatan backend & engine AI/PBPK.
+2. **`GET /api/v1/compounds/autocomplete?q={query}&limit={n}`** — Kueri autocomplete 1.231 senyawa simulatable DILIrank 2.0.
+3. **`POST /api/v1/simulate`** — Mengirim payload dosis, senyawa, & 4 kovariat alometrik; menerima $P_{\text{DILI}}$, visual color/blinking, segmen Couinaud, kurva time series 24 jam, dan SHAP.
 4. **`GET /api/v1/pbpk/debug`** — Endpoint debug parameter alometrik PBPK ($V_L, Q_L, Cl, \%BF, K_{P,R}, \text{exposure\_index}$).
 
 ---

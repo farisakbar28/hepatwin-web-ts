@@ -26,7 +26,7 @@ export function ControlPanel() {
     clearSimulationError();
 
     if (!selectedCompound) {
-      setError('Pilih senyawa dari daftar autocomplete INN.');
+      setError('Pilih senyawa dari daftar nama generik (INN).');
       return;
     }
     if (!dose || dose <= 0) {

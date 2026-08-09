@@ -4,6 +4,7 @@ import { OrbitControls, Environment } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { CouinaudLiverModel } from './CouinaudLiverModel';
 import { deriveSimulationVisual } from './simulationVisual';
+import { labelOrRaw, segmentMappingTypeLabel } from '../../constants/labels';
 import { useAppStore } from '../../state/store';
 import gsap from 'gsap';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -97,28 +98,28 @@ export function Canvas3DViewer() {
   const hintText = visual.isFallbackNoEvidence
     ? 'seluruh 8 segmen menyala redup tanpa pola spesifik (evidence unavailable)'
     : visual.isDiffuse
-      ? '8 segmen menyala — klik hotspot untuk zoom in segmen'
+      ? '8 segmen menyala - klik hotspot untuk zoom in segmen'
       : hasSegments
         ? 'klik area berkedip untuk zoom in segmen'
-        : 'model hati — jalankan simulasi untuk melihat hotspot';
+        : 'jalankan simulasi untuk melihat hotspot';
 
   return (
     <>
-      <div className="flex justify-between items-start z-10 absolute top-0 left-0 right-0 p-4 sm:p-6 pointer-events-none">
-        <div>
-          <span className="font-bold text-slate-800 text-sm drop-shadow-md">Anatomi 8 Segmen Couinaud</span>
+      <div className="flex justify-between items-start gap-2 z-10 absolute top-0 left-0 right-0 p-3 sm:p-4 lg:p-6 pointer-events-none">
+        <div className="min-w-0">
+          <span className="font-bold text-slate-800 text-xs sm:text-sm drop-shadow-md">Anatomi 8 Segmen Couinaud</span>
           {/* Koreksi #3: label segment_mapping_type DINAMIS dari backend, bukan hardcode */}
           {simulationResult?.segment_mapping_type && (
-            <p className="text-[10px] text-slate-500 mt-1 bg-white/80 rounded px-2 py-1 w-max">
-              Pemetaan segmen: <span className="font-semibold text-slate-600">{simulationResult.segment_mapping_type}</span>
+            <p className="text-[9px] sm:text-[10px] text-slate-500 mt-1 bg-white/80 rounded px-1.5 sm:px-2 py-1 max-w-[92vw] sm:max-w-md break-words leading-snug">
+              Pemetaan segmen: <span className="font-semibold text-slate-600">{labelOrRaw(segmentMappingTypeLabel, simulationResult.segment_mapping_type)}</span>
             </p>
           )}
         </div>
 
-        <div className="flex flex-col items-end gap-1.5">
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
           {simulationResult && (
             <div
-              className={`rounded-full px-3 py-1 text-[10px] font-bold tracking-wide uppercase border ${
+              className={`rounded-lg px-2.5 sm:px-3 py-1 text-[9px] sm:text-[10px] font-bold tracking-wide uppercase border text-right max-w-[65vw] sm:max-w-md leading-tight ${
                 riskLevel === 'high'
                   ? 'bg-red-100 text-red-700 border-red-200'
                   : riskLevel === 'medium'
@@ -131,8 +132,8 @@ export function Canvas3DViewer() {
           )}
           {/* Koreksi #1: label eksplisit "evidence unavailable" saat fallback no-monograf */}
           {visual.isFallbackNoEvidence && (
-            <div className="rounded-full px-3 py-1 text-[10px] font-bold tracking-wide uppercase bg-slate-800 text-amber-300 border border-slate-700">
-              Evidence unavailable — tidak ada data pola cedera spesifik
+            <div className="rounded-lg px-2.5 sm:px-3 py-1 text-[9px] sm:text-[10px] font-bold tracking-wide uppercase bg-slate-800 text-amber-300 border border-slate-700 text-right max-w-[65vw] sm:max-w-md leading-tight">
+              Pola cedera tidak tersedia (evidence unavailable)
             </div>
           )}
         </div>
@@ -180,26 +181,27 @@ export function Canvas3DViewer() {
       )}
 
       {/* Viewer Footer: Hints & Legends */}
-      <div className="absolute right-6 top-1/2 -translate-y-1/2 z-10 flex flex-col items-end gap-2">
+      <div className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 z-10 flex flex-col items-end gap-2">
         <button
           onClick={handleResetCamera}
-          className="flex flex-row items-center gap-1.5 text-slate-500 hover:text-blue-600 transition-colors bg-white/80 backdrop-blur rounded-full px-3 py-2 shadow-sm border border-slate-200"
+          title="Atur Ulang Tampilan"
+          className="flex flex-row items-center gap-1.5 text-slate-500 hover:text-blue-600 transition-colors bg-white/80 backdrop-blur rounded-full px-2.5 py-2 sm:px-3 sm:py-2 shadow-sm border border-slate-200"
         >
           <RefreshCw size={14} />
-          <span className="text-[10px] font-bold tracking-wide uppercase">Reset View</span>
+          <span className="hidden sm:inline text-[10px] font-bold tracking-wide uppercase">Atur Ulang Tampilan</span>
         </button>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 pointer-events-none z-10 flex flex-col justify-end">
-        <div className="flex justify-between items-end text-[11px] text-slate-500 font-medium mb-4 border-b border-slate-200 pb-4">
-          <span className="bg-white/70 px-2 py-1 rounded">model melayang bebas · drag untuk rotasi</span>
+      <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-6 pointer-events-none z-10 flex flex-col justify-end">
+        <div className="flex justify-between items-end gap-2 text-[10px] sm:text-[11px] text-slate-500 font-medium mb-2 sm:mb-4 border-b border-slate-200 pb-2 sm:pb-4">
+          <span className="hidden md:inline bg-white/70 px-2 py-1 rounded">model melayang bebas · drag untuk rotasi</span>
           <span className="bg-white/70 px-2 py-1 rounded">{hintText}</span>
         </div>
 
-        <div className="flex flex-wrap justify-center gap-6 sm:gap-10 text-[11px] sm:text-xs font-bold text-slate-600 bg-white/90 backdrop-blur-md rounded-full py-2.5 px-6 w-max mx-auto shadow-md border border-slate-200">
-          <div className="flex items-center gap-2"><div className="w-3.5 h-3.5 rounded-full bg-[#5DCAA5] shadow-inner"></div><span>Risiko rendah</span></div>
-          <div className="flex items-center gap-2"><div className="w-3.5 h-3.5 rounded-full bg-[#EF9F27] shadow-inner"></div><span>Risiko sedang</span></div>
-          <div className="flex items-center gap-2"><div className="w-3.5 h-3.5 rounded-full bg-[#E24B4A] shadow-inner"></div><span>Risiko tinggi</span></div>
+        <div className="flex flex-wrap justify-center gap-3 sm:gap-10 text-[10px] sm:text-xs font-bold text-slate-600 bg-white/90 backdrop-blur-md rounded-full py-1.5 sm:py-2.5 px-3 sm:px-6 w-full sm:w-max mx-auto shadow-md border border-slate-200">
+          <div className="flex items-center gap-1.5 sm:gap-2"><div className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-[#5DCAA5] shadow-inner"></div><span>Prioritas rendah (in-silico)</span></div>
+          <div className="flex items-center gap-1.5 sm:gap-2"><div className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-[#EF9F27] shadow-inner"></div><span>Prioritas sedang (in-silico)</span></div>
+          <div className="flex items-center gap-1.5 sm:gap-2"><div className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-[#E24B4A] shadow-inner"></div><span>Prioritas tinggi (in-silico)</span></div>
         </div>
       </div>
     </>

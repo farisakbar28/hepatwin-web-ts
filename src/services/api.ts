@@ -48,7 +48,7 @@ export function toAppApiError(err: unknown): AppApiError {
   if (error.code === 'ECONNABORTED') {
     return {
       kind: 'timeout',
-      message: 'Permintaan melebihi batas waktu 5 detik. Silakan coba lagi.',
+      message: 'Permintaan ke backend tidak selesai dalam batas waktu. Silakan coba lagi beberapa saat.',
       detail,
     };
   }
@@ -132,7 +132,9 @@ export const fetchCompoundsAutocomplete = async (
 
 export const simulateDILI = async (payload: SimulationRequest): Promise<SimulationResponse> => {
   try {
-    const response = await apiClient.post<SimulationResponse>('/simulate', payload);
+    // Timeout longgar untuk simulasi: proses dibiarkan berjalan selama backend
+    // masih bekerja (jalur SHAP tail bisa lebih lama dari permintaan biasa).
+    const response = await apiClient.post<SimulationResponse>('/simulate', payload, { timeout: 60000 });
     return response.data;
   } catch (err: unknown) {
     throw toAppApiError(err);

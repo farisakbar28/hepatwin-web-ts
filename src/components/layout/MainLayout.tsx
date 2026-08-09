@@ -22,7 +22,7 @@ export function MainLayout() {
                   </div>
               </div>
               <button
-                className={`font-semibold text-xs sm:text-sm px-4 py-2 rounded-xl transition-colors shadow-sm ${
+                className={`whitespace-nowrap font-semibold text-xs sm:text-sm px-4 py-2 rounded-xl transition-colors shadow-sm ${
                   hasResult
                     ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
                     : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
@@ -40,7 +40,7 @@ export function MainLayout() {
           </div>
       </header>
 
-      <main className="flex-1 w-full max-w-[1440px] mx-auto p-4 sm:p-6 lg:py-8 lg:px-8 flex flex-col gap-6 lg:gap-8">
+      <main className="flex-1 w-full max-w-[1440px] mx-auto p-4 sm:p-6 lg:py-8 lg:px-8 flex flex-col gap-6 lg:gap-8 overflow-x-clip">
         
         {/* Top Section */}
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start w-full">

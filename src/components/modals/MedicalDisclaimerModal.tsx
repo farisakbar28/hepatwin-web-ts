@@ -88,7 +88,7 @@ export function MedicalDisclaimerModal({ isOpen, onClose, onConfirm }: MedicalDi
               onChange={(e) => setIsInSilicoAccepted(e.target.checked)}
               className="w-4 h-4 mt-0.5 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer shrink-0"
             />
-            Saya memahami parameter PBPK/AI Fase 1 masih memerlukan validasi K2/K3/K6 dan review Farmasi.
+            Saya memahami parameter PBPK/AI saat ini masih memerlukan validasi ilmiah lebih lanjut dan tinjauan ahli Farmasi.
           </label>
 
           <label className="flex items-start gap-3 bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs text-slate-700 font-medium leading-normal cursor-pointer select-none">

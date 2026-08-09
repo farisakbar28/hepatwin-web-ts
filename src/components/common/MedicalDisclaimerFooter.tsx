@@ -7,7 +7,7 @@ export function MedicalDisclaimerFooter() {
       <div className="text-xs sm:text-sm text-amber-900 leading-relaxed">
         <strong className="font-bold uppercase tracking-wide">PENTING (MEDICAL DISCLAIMER):</strong>
         <p className="mt-1">
-          HepaTwin adalah perangkat lunak penunjang keputusan praklinis yang murni bersifat <em>in-silico</em> untuk riset/edukasi. Hasil AI, SHAP, PBPK, dan visualisasi 3D bertujuan membantu penyusunan hipotesis dan triase awal, <strong>bukan diagnosis klinis, bukan rekomendasi terapi/dosis, dan bukan pengganti uji in-vitro, in-vivo, uji klinis, atau penilaian regulator</strong>. PBPK Fase 1 linear tanpa absorpsi oral, protein binding, Km/Vmax, NAPQI/glutathione, dan parameter IVIVE compound-specific penuh. Warna segmen Couinaud adalah heuristik visual pedagogis, bukan lokalisasi histologis klinis. Ambang AI/exposure bersifat distribusional internal dan pending validasi K2/K3/K6.
+          HepaTwin adalah perangkat lunak penunjang keputusan praklinis yang murni bersifat <em>in-silico</em> untuk riset/edukasi. Hasil AI, SHAP, PBPK, dan visualisasi 3D bertujuan membantu penyusunan hipotesis dan triase awal, <strong>bukan diagnosis klinis, bukan rekomendasi terapi/dosis, dan bukan pengganti uji in-vitro, in-vivo, uji klinis, atau penilaian regulator</strong>. PBPK saat ini linear tanpa absorpsi oral, protein binding, Km/Vmax, NAPQI/glutathione, dan parameter IVIVE compound-specific penuh. Warna segmen Couinaud adalah heuristik visual pedagogis, bukan lokalisasi histologis klinis. Ambang AI/exposure bersifat distribusional internal dan masih menunggu validasi ilmiah lebih lanjut.
         </p>
       </div>
     </div>

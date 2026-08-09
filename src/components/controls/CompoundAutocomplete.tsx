@@ -124,7 +124,7 @@ export function CompoundAutocomplete({ selectedCompound, setSelectedCompound }: 
              setIsDropdownOpen(true);
           }
         }}
-        placeholder="Ketik nama INN obat (min 2 karakter)..."
+        placeholder="Ketik nama generik internasional obat (INN) (min 2 karakter)..."
         className="w-full bg-white border border-slate-300 text-slate-800 text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block p-2.5 shadow-sm"
       />
       {isFetching && (
@@ -149,7 +149,7 @@ export function CompoundAutocomplete({ selectedCompound, setSelectedCompound }: 
                 <span className="font-medium">{c.compound_name}</span>
                 {c.dili_concern && (
                   <span className="text-xs text-slate-500">
-                    DILI Concern: {c.dili_concern}
+                    Kategori Risiko DILI: {c.dili_concern}
                   </span>
                 )}
               </li>

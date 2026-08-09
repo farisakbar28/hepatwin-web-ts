@@ -107,7 +107,7 @@ export function HotspotOverlay({ segmentRoman, position, color, periodMs, dimmed
 
     const period = periodMs / 1000; // ms -> s
     const phase = (clock.elapsedTime % period) / period;
-    // Sin wave -> opacity 0.3..1.0 (subtle pulse) per plan 4.4
+    // Sin wave -> opacity 0.3..1.0 (subtle pulse)
     const pulse = 0.5 + 0.5 * Math.sin(phase * Math.PI * 2);
     mat.opacity = dimmed ? (0.3 + 0.7 * pulse) * DIM_FACTOR : 0.3 + 0.7 * pulse;
   });
