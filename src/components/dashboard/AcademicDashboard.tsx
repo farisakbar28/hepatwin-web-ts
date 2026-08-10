@@ -125,7 +125,7 @@ export function AcademicDashboard() {
                         <div className="flex-1 w-full relative flex flex-col justify-end min-h-[140px] sm:min-h-[180px]">
                             {hasSeries ? (
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={simulationResult?.time_series_pbpk || []} margin={{ top: 10, right: 10, left: -15, bottom: 20 }}>
+                                     <LineChart data={simulationResult?.time_series_pbpk || []} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
                                         <CartesianGrid vertical={false} stroke="#f1f5f9" strokeWidth={1.5} strokeDasharray="4 4" />
                                          <XAxis
                                              dataKey="time"
@@ -134,6 +134,7 @@ export function AcademicDashboard() {
                                              tick={{ fontSize: 11, fill: '#94a3b8' }}
                                              ticks={[0, 4, 8, 12, 16, 20, 24]}
                                              tickFormatter={(val) => `${val}j`}
+                                             dy={2}
                                          />
                                          <YAxis domain={[0, 'auto']} tick={{ fontSize: 11, fill: '#94a3b8' }} width={30} tickMargin={2} />
                                         <Tooltip content={<PKPDTooltip />} cursor={{ stroke: '#e2e8f0', strokeWidth: 2, strokeDasharray: '4 4' }} />
