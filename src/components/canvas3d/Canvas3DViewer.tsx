@@ -219,34 +219,29 @@ export function Canvas3DViewer() {
           <span className="bg-white/70 px-2 py-1 rounded">{hintText}</span>
         </div>
 
-        {/* Legend: chip aktif (sesuai risk_level) diberi ring highlight */}
-        <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-3">
-          {RISK_LEGEND.map((chip) => {
-            const active = Boolean(simulationResult) && riskLevel === chip.level;
-            return (
-              <div
-                key={chip.level}
-                className={`flex items-center gap-1.5 rounded-full px-2 sm:px-3.5 py-1 text-[10px] sm:text-[11px] font-bold shadow-sm border transition-colors ${
-                  active
-                    ? 'bg-white ring-2 ring-offset-1 ring-slate-700 border-slate-300 text-slate-800'
-                    : 'bg-white/85 border-slate-200 text-slate-500'
-                }`}
-              >
-                <span
-                  className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shadow-inner flex-shrink-0"
-                  style={{ backgroundColor: chip.color }}
-                ></span>
-                <span className="sm:hidden">{chip.short}</span>
-                <span className="hidden sm:inline">{chip.full}</span>
-              </div>
-            );
-          })}
-          {visual.isFallbackNoEvidence && (
-            <div className="flex items-center gap-1.5 rounded-full px-2 sm:px-3.5 py-1 text-[10px] sm:text-[11px] font-bold bg-slate-800 text-amber-300 border border-slate-700 shadow-sm">
-              Evidence unavailable
-            </div>
-          )}
-        </div>
+          {/* Legend: chip aktif (sesuai risk_level) diberi ring highlight */}
+          <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-3">
+            {RISK_LEGEND.map((chip) => {
+              const active = Boolean(simulationResult) && riskLevel === chip.level;
+              return (
+                <div
+                  key={chip.level}
+                  className={`flex items-center gap-1.5 rounded-full px-2 sm:px-3.5 py-1 text-[10px] sm:text-[11px] font-bold shadow-sm border transition-colors ${
+                    active
+                      ? 'bg-white ring-2 ring-offset-1 ring-slate-700 border-slate-300 text-slate-800'
+                      : 'bg-white/85 border-slate-200 text-slate-500'
+                  }`}
+                >
+                  <span
+                    className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shadow-inner flex-shrink-0"
+                    style={{ backgroundColor: chip.color }}
+                  ></span>
+                  <span className="sm:hidden">{chip.short}</span>
+                  <span className="hidden sm:inline">{chip.full}</span>
+                </div>
+              );
+            })}
+          </div>
       </div>
     </>
   );
