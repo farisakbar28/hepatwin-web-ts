@@ -120,7 +120,7 @@ export function Canvas3DViewer() {
             title={simulationResult?.segment_mapping_type ? labelOrRaw(segmentMappingTypeLabel, simulationResult.segment_mapping_type) : undefined}
             className="inline-flex items-center text-[11px] sm:text-sm font-bold text-slate-800 bg-white/85 backdrop-blur rounded-lg px-2 py-1 shadow-sm border border-slate-200/70 leading-tight"
           >
-            <span className="hidden sm:inline">Anatomi </span>
+            <span className="hidden sm:inline">Anatomi&nbsp;</span>
             <span>8 Segmen Couinaud</span>
           </h1>
           {/* Catatan pemetaan segmen: tampil di layar besar; di layar kecil cukup via

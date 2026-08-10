@@ -58,7 +58,7 @@ Buat file `.env` di root proyek (atau salin dari `.env.example`):
 VITE_API_BASE_URL=http://localhost:8000
 ```
 
-- Backend live saat ini: `https://hepatwin-backend-py.fastapicloud.dev`
+- Backend live saat ini: `https://hepatwin-backend-py.fastapicloud.dev` (terverifikasi aktif dan tersinkronisasi penuh dengan frontend).
 - File `.env` **tidak di-commit** (lihat `.gitignore`); setiap environment (dev/preview/production) wajib mengeset `VITE_API_BASE_URL`.
 
 ---
