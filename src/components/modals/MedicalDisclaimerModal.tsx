@@ -46,7 +46,7 @@ export function MedicalDisclaimerModal({ isOpen, onClose, onConfirm }: MedicalDi
       onClick={onClose}
     >
       <div
-        className="bg-white border border-slate-200 rounded-2xl shadow-xl max-w-lg w-full p-6 flex flex-col gap-5 relative overflow-hidden"
+        className="bg-white border border-slate-200 rounded-2xl shadow-xl max-w-lg w-full p-5 sm:p-6 flex flex-col gap-4 sm:gap-5 relative overflow-y-auto max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
@@ -66,7 +66,7 @@ export function MedicalDisclaimerModal({ isOpen, onClose, onConfirm }: MedicalDi
         <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-4 text-xs sm:text-sm text-amber-950 leading-relaxed max-h-60 overflow-y-auto">
           <strong className="font-bold block mb-1 uppercase tracking-wide text-amber-900">PENTING (MEDICAL DISCLAIMER):</strong>
           <p>
-            HepaTwin merupakan perangkat lunak penunjang keputusan (<em>decision support system</em>) praklinis yang murni bersifat <em>in silico</em> (simulasi komputasional). Hasil prediksi dan visualisasi 3D bertujuan membantu penyusunan hipotesis ilmiah dan triase skrining awal, <strong>bukan merupakan diagnosis klinis, keputusan medis, atau pengganti mutlak bagi pengujian <em>in vitro</em> dan <em>in vivo</em> yang diatur otoritas kesehatan resmi (BPOM/FDA)</strong>.
+            HepaTwin merupakan perangkat lunak penunjang keputusan (<em>decision support system</em>) praklinis yang murni bersifat <em>in silico</em> (simulasi komputasional). Hasil prediksi dan visualisasi 3D bertujuan membantu penyusunan hipotesis ilmiah dan triase skrining awal, <strong>bukan merupakan diagnosis klinis, keputusan medis, atau pengganti mutlak bagi pengujian <em>in vitro</em> dan <em>in vivo</em> yang diatur otoritas kesehatan resmi</strong>.
           </p>
         </div>
 

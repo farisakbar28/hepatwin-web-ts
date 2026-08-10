@@ -1,3 +1,17 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Sticky header offset: saat browser me-scroll otomatis ke elemen fokus
+   (mis. kolom input), konten tidak tertutup header sticky. */
+html {
+  scroll-padding-top: 4.5rem;
+}
+
+/* Ruang ekstra di bawah halaman saat keyboard virtual mobile/tablet terbuka
+   (di-set oleh useKeyboardSafeScroll via --kb-offset) sehingga kolom input
+   bisa di-scroll naik ke posisi tepat di atas keyboard. */
+body {
+  padding-bottom: var(--kb-offset, 0px);
+  transition: padding-bottom 160ms ease-out;
+}

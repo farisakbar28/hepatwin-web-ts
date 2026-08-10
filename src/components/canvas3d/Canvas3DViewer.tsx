@@ -3,7 +3,7 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { CouinaudLiverModel } from './CouinaudLiverModel';
-import { deriveSimulationVisual } from './simulationVisual';
+import { deriveSimulationVisual, VISUAL_COLORS } from './simulationVisual';
 import { labelOrRaw, segmentMappingTypeLabel } from '../../constants/labels';
 import { useAppStore } from '../../state/store';
 import gsap from 'gsap';
@@ -11,10 +11,19 @@ import { ErrorBoundary } from 'react-error-boundary';
 import type { FallbackProps } from 'react-error-boundary';
 import { AlertOctagon, RefreshCw } from 'lucide-react';
 import * as THREE from 'three';
+import type { RiskLevel } from '../../types';
 
 // Konstanta modul: hindari alokasi THREE.Vector3 baru setiap re-render
 const DEFAULT_CAM_POS = new THREE.Vector3(0, 0, 7);
 const DEFAULT_TARGET = new THREE.Vector3(0, 0, 0);
+
+/** Legend risiko in-silico — chip aktif (sesuai risk_level hasil) diberi ring highlight.
+ *  Warna mengikuti VISUAL_COLORS (satu sumber kebenaran palet). */
+const RISK_LEGEND: { level: RiskLevel; color: string; short: string; full: string }[] = [
+  { level: 'low', color: VISUAL_COLORS.green, short: 'Rendah', full: 'Prioritas rendah (in-silico)' },
+  { level: 'medium', color: VISUAL_COLORS.yellow, short: 'Sedang', full: 'Prioritas sedang (in-silico)' },
+  { level: 'high', color: VISUAL_COLORS.red, short: 'Tinggi', full: 'Prioritas tinggi (in-silico)' },
+];
 
 function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
   const errMessage = error instanceof Error ? error.message : String(error);
@@ -86,12 +95,6 @@ export function Canvas3DViewer() {
   };
 
   const hasSegments = visual.affectedSegments.length > 0;
-  // Badge hanya dirender saat sudah ada hasil simulasi (simulationResult !== null).
-  const badgeText = visual.isDiffuse
-    ? 'Seluruh Hati (Difus)'
-    : hasSegments
-      ? `Segmen Terpengaruh: ${visual.affectedSegments.join(', ')}`
-      : 'Segmen Terpengaruh: tidak tersedia';
 
   const hintText = visual.isFallbackNoEvidence
     ? 'seluruh 8 segmen menyala redup tanpa pola spesifik (evidence unavailable)'
@@ -101,40 +104,57 @@ export function Canvas3DViewer() {
         ? 'klik area berkedip untuk zoom in segmen'
         : 'jalankan simulasi untuk melihat hotspot';
 
+  const segmentSummary = visual.isDiffuse
+    ? 'Seluruh Hati (Difus)'
+    : hasSegments
+      ? visual.affectedSegments.join(', ')
+      : 'tidak tersedia';
+
   return (
     <>
-      <div className="flex justify-between items-start gap-2 z-10 absolute top-0 left-0 right-0 p-3 sm:p-4 lg:p-6 pointer-events-none">
-        <div className="min-w-0">
-          <span className="font-bold text-slate-800 text-xs sm:text-sm drop-shadow-md">Anatomi 8 Segmen Couinaud</span>
-          {/* Label segment_mapping_type dinamis dari backend (bukan hardcode) */}
+      {/* Overlay atas — kompak & semi-transparan agar model tetap terlihat */}
+      <div className="absolute top-0 left-0 right-0 z-10 flex items-start justify-between gap-2 p-2.5 sm:p-4 lg:p-6 pointer-events-none">
+        {/* Judul (kiri) */}
+        <div className="min-w-0 max-w-[48vw] sm:max-w-none">
+          <h1
+            title={simulationResult?.segment_mapping_type ? labelOrRaw(segmentMappingTypeLabel, simulationResult.segment_mapping_type) : undefined}
+            className="inline-flex items-center text-[11px] sm:text-sm font-bold text-slate-800 bg-white/85 backdrop-blur rounded-lg px-2 py-1 shadow-sm border border-slate-200/70 leading-tight"
+          >
+            <span className="hidden sm:inline">Anatomi </span>
+            <span>8 Segmen Couinaud</span>
+          </h1>
+          {/* Catatan pemetaan segmen: tampil di layar besar; di layar kecil cukup via
+              tooltip + footer disclaimer permanen di dasbor. */}
           {simulationResult?.segment_mapping_type && (
-            <p className="text-[9px] sm:text-[10px] text-slate-500 mt-1 bg-white/80 rounded px-1.5 sm:px-2 py-1 max-w-[92vw] sm:max-w-md break-words leading-snug">
+            <p className="hidden lg:block text-[9px] text-slate-500 mt-1 bg-white/85 rounded px-2 py-0.5 max-w-xs leading-snug">
               Pemetaan segmen: <span className="font-semibold text-slate-600">{labelOrRaw(segmentMappingTypeLabel, simulationResult.segment_mapping_type)}</span>
             </p>
           )}
         </div>
 
-        <div className="flex flex-col items-end gap-1.5 shrink-0">
+        {/* Status hasil (kanan) — satu chip ringkas dengan batas lebar */}
+        <div className="flex flex-col items-end gap-1.5 shrink-0 min-w-0">
           {simulationResult && (
             <div
-              className={`rounded-lg px-2.5 sm:px-3 py-1 text-[9px] sm:text-[10px] font-bold tracking-wide uppercase border text-right max-w-[65vw] sm:max-w-md leading-tight ${
+              className={`rounded-lg px-2 py-1 text-[10px] font-bold tracking-wide uppercase border text-right max-w-[50vw] sm:max-w-xs leading-tight bg-white/90 backdrop-blur ${
                 riskLevel === 'high'
-                  ? 'bg-red-100 text-red-700 border-red-200'
+                  ? 'text-red-700 border-red-200'
                   : riskLevel === 'medium'
-                    ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
-                    : 'bg-green-100 text-green-700 border-green-200'
+                    ? 'text-yellow-700 border-yellow-200'
+                    : 'text-green-700 border-green-200'
               }`}
             >
-              {badgeText}
+              <span className="hidden sm:inline">Segmen Terpengaruh: </span>
+              <span className="break-words">{segmentSummary}</span>
             </div>
           )}
           {/* Label eksplisit "evidence unavailable" saat fallback tanpa monograf */}
           {visual.isFallbackNoEvidence && (
             <div
               title={visual.evidenceNote ?? 'Pola cedera spesifik tidak tersedia di data kurasi'}
-              className="rounded-lg px-2.5 sm:px-3 py-1 text-[9px] sm:text-[10px] font-bold tracking-wide uppercase bg-slate-800 text-amber-300 border border-slate-700 text-right max-w-[65vw] sm:max-w-md leading-tight"
+              className="rounded-lg px-2 py-1 text-[10px] font-bold tracking-wide uppercase bg-slate-800/90 backdrop-blur text-amber-300 border border-slate-700 text-right max-w-[50vw] sm:max-w-xs leading-tight"
             >
-              Pola cedera tidak tersedia (evidence unavailable)
+              Evidence unavailable
             </div>
           )}
         </div>
@@ -180,8 +200,8 @@ export function Canvas3DViewer() {
         </div>
       )}
 
-      {/* Viewer Footer: Hints & Legends */}
-      <div className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 z-10 flex flex-col items-end gap-2">
+      {/* Viewer Footer: tombol reset + hints + legends */}
+      <div className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 z-10 flex flex-col items-end gap-2">
         <button
           onClick={handleResetCamera}
           title="Atur Ulang Tampilan"
@@ -192,16 +212,40 @@ export function Canvas3DViewer() {
         </button>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-6 pointer-events-none z-10 flex flex-col justify-end">
-        <div className="flex justify-between items-end gap-2 text-[10px] sm:text-[11px] text-slate-500 font-medium mb-2 sm:mb-4 border-b border-slate-200 pb-2 sm:pb-4">
-          <span className="hidden md:inline bg-white/70 px-2 py-1 rounded">model melayang bebas · drag untuk rotasi</span>
+      <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-6 pointer-events-none z-10 flex flex-col justify-end gap-1.5 sm:gap-2">
+        {/* Hint interaksi: hanya layar besar agar kanvas lega di mobile */}
+        <div className="hidden md:flex justify-between items-end gap-2 text-[10px] text-slate-500 font-medium border-b border-slate-200 pb-1.5">
+          <span className="bg-white/70 px-2 py-1 rounded">model melayang bebas · drag untuk rotasi</span>
           <span className="bg-white/70 px-2 py-1 rounded">{hintText}</span>
         </div>
 
-        <div className="flex flex-wrap justify-center gap-3 sm:gap-10 text-[10px] sm:text-xs font-bold text-slate-600 bg-white/90 backdrop-blur-md rounded-full py-1.5 sm:py-2.5 px-3 sm:px-6 w-full sm:w-max mx-auto shadow-md border border-slate-200">
-          <div className="flex items-center gap-1.5 sm:gap-2"><div className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-[#5DCAA5] shadow-inner"></div><span>Prioritas rendah (in-silico)</span></div>
-          <div className="flex items-center gap-1.5 sm:gap-2"><div className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-[#EF9F27] shadow-inner"></div><span>Prioritas sedang (in-silico)</span></div>
-          <div className="flex items-center gap-1.5 sm:gap-2"><div className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-[#E24B4A] shadow-inner"></div><span>Prioritas tinggi (in-silico)</span></div>
+        {/* Legend: chip aktif (sesuai risk_level) diberi ring highlight */}
+        <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-3">
+          {RISK_LEGEND.map((chip) => {
+            const active = Boolean(simulationResult) && riskLevel === chip.level;
+            return (
+              <div
+                key={chip.level}
+                className={`flex items-center gap-1.5 rounded-full px-2 sm:px-3.5 py-1 text-[10px] sm:text-[11px] font-bold shadow-sm border transition-colors ${
+                  active
+                    ? 'bg-white ring-2 ring-offset-1 ring-slate-700 border-slate-300 text-slate-800'
+                    : 'bg-white/85 border-slate-200 text-slate-500'
+                }`}
+              >
+                <span
+                  className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shadow-inner flex-shrink-0"
+                  style={{ backgroundColor: chip.color }}
+                ></span>
+                <span className="sm:hidden">{chip.short}</span>
+                <span className="hidden sm:inline">{chip.full}</span>
+              </div>
+            );
+          })}
+          {visual.isFallbackNoEvidence && (
+            <div className="flex items-center gap-1.5 rounded-full px-2 sm:px-3.5 py-1 text-[10px] sm:text-[11px] font-bold bg-slate-800 text-amber-300 border border-slate-700 shadow-sm">
+              Evidence unavailable
+            </div>
+          )}
         </div>
       </div>
     </>

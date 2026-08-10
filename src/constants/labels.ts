@@ -19,8 +19,8 @@ export function labelOrRaw(map: Record<string, string>, value: string | null | u
 
 /** Prioritas AI — frasa PRD §8.3 (bukan "Aman/Berbahaya/Kritis", bukan "Risiko" polos). */
 export const riskPriorityLabel: Record<string, string> = {
-  low: 'Prioritas rendah in-silico',
-  medium: 'Prioritas sedang in-silico',
+  low: 'Prioritas rendah (in-silico)',
+  medium: 'Prioritas sedang (in-silico)',
   high: 'Prioritas tinggi untuk kajian lanjut',
 };
 
