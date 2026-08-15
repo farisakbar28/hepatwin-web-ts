@@ -1,8 +1,9 @@
 import { useAppStore } from '../../state/store';
+import { useSlowRequestDetector } from '../../hooks/useSlowRequestDetector';
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { MedicalDisclaimerFooter } from '../common/MedicalDisclaimerFooter';
 import { largeMoleculeErrorMessageFor } from '../../services/compoundMeta';
-import { MODEL_UNAVAILABLE_LABEL, exposureCategoryLabel, injuryPatternLabel, labelOrRaw, riskPriorityLabel, shapGroupLabel } from '../../constants/labels';
+import { COLD_START_WAIT_DETAIL, COLD_START_WAIT_MESSAGE, MODEL_UNAVAILABLE_LABEL, RETRY_LABEL, exposureCategoryLabel, injuryPatternLabel, labelOrRaw, riskPriorityLabel, shapGroupLabel } from '../../constants/labels';
 
 import type { TooltipProps } from 'recharts';
 import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
@@ -29,8 +30,12 @@ const PKPDTooltip = ({ active, payload, label }: CustomTooltipProps) => {
 };
 
 export function AcademicDashboard() {
-    const { simulationResult, isSimulating, simulationError, lastSimulationHepatwinId } = useAppStore();
+    const { simulationResult, isSimulating, simulationError, lastSimulationHepatwinId, lastSimulationRequest, retryLastSimulation } = useAppStore();
     const hasSeries = Boolean(simulationResult?.time_series_pbpk?.length);
+
+    // Simulasi berjalan lebih lama dari biasanya (> 5 dtk) = kemungkinan besar
+    // backend sedang cold start; tampilkan pesan informatif alih-alih diam.
+    const isSimulationSlow = useSlowRequestDetector(isSimulating);
 
     return (
         <>
@@ -40,14 +45,29 @@ export function AcademicDashboard() {
 
             <div className="w-full fade-in">
                 {simulationError && (
-                    <div className="mb-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-4 text-sm">
-                        {largeMoleculeErrorMessageFor(simulationError, lastSimulationHepatwinId)}
+                    <div className="mb-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-4 text-sm flex items-center justify-between gap-3 flex-wrap">
+                        <span className="min-w-0">{largeMoleculeErrorMessageFor(simulationError, lastSimulationHepatwinId)}</span>
+                        {lastSimulationRequest && (
+                            <button
+                                onClick={() => void retryLastSimulation()}
+                                className="shrink-0 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg px-3 py-1.5 transition-colors"
+                            >
+                                {RETRY_LABEL}
+                            </button>
+                        )}
                     </div>
                 )}
 
                 {isSimulating && (
                     <div className="mb-4 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl p-4 text-sm">
-                        Simulasi AI/PBPK sedang berjalan...
+                        {isSimulationSlow ? (
+                            <p>
+                                <span className="font-semibold">{COLD_START_WAIT_MESSAGE}</span>
+                                <span className="block mt-1 text-xs text-blue-600/80">{COLD_START_WAIT_DETAIL}</span>
+                            </p>
+                        ) : (
+                            'Simulasi AI/PBPK sedang berjalan...'
+                        )}
                     </div>
                 )}
 

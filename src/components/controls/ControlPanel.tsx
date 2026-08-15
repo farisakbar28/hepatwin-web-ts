@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useAppStore } from '../../state/store';
+import { useSlowRequestDetector } from '../../hooks/useSlowRequestDetector';
+import { COLD_START_WAIT_MESSAGE, RETRY_LABEL } from '../../constants/labels';
 import type { SimulationRequest, CompoundSelection, SexCode } from '../../types';
 import { MedicalDisclaimerModal } from '../modals/MedicalDisclaimerModal';
 import { CompoundAutocomplete } from './CompoundAutocomplete';
@@ -13,7 +15,7 @@ import {
 const mapGenderToSexCode = (gender: 'M' | 'F'): SexCode => gender === 'M' ? 'L' : 'P';
 
 export function ControlPanel() {
-  const { connectionStatus, runSimulation, isSimulating, simulationError, clearSimulationError, disclaimerConsented, setDisclaimerConsented } = useAppStore();
+  const { connectionStatus, runSimulation, retryLastSimulation, isSimulating, simulationError, clearSimulationError, disclaimerConsented, setDisclaimerConsented, lastSimulationRequest } = useAppStore();
 
   const [selectedCompound, setSelectedCompound] = useState<CompoundSelection | null>(null);
 
@@ -94,6 +96,12 @@ export function ControlPanel() {
     setPendingPayload(null);
   };
 
+  // Deteksi request yang berjalan lebih lama dari biasanya (> 5 dtk) — indikasi
+  // cold start backend scale-to-zero — untuk menampilkan pesan yang ramah.
+  const isConnectionSlow = useSlowRequestDetector(connectionStatus === 'Loading');
+  const isSimulationSlow = useSlowRequestDetector(isSimulating);
+  const isCompoundCheckSlow = useSlowRequestDetector(isCheckingCompound);
+
   // Pesan error: fallback ramah khusus molekul besar bila error server datang
   // untuk senyawa berukuran besar -- logika terpusat di compoundMeta agar
   // konsisten dengan banner error di dashboard.
@@ -102,7 +110,9 @@ export function ControlPanel() {
   const connectionLabel = connectionStatus === 'Connected'
     ? 'Terhubung ke Backend AI/PBPK'
     : connectionStatus === 'Loading'
-      ? 'Memeriksa koneksi backend...'
+      ? isConnectionSlow
+        ? COLD_START_WAIT_MESSAGE
+        : 'Memeriksa koneksi backend...'
       : 'Backend tidak tersedia';
 
   const connectionDot = connectionStatus === 'Connected'
@@ -185,15 +195,36 @@ export function ControlPanel() {
         </div>
 
         {error && <p className="text-[10px] text-rose-500 mt-1 mb-2">{error}</p>}
-        {simulationError && <p className="text-[10px] text-rose-600 mt-1 mb-2 bg-rose-50 border border-rose-100 rounded-lg p-2">{displayedSimulationError}</p>}
+        {simulationError && (
+          <div className="text-[10px] text-rose-600 mt-1 mb-2 bg-rose-50 border border-rose-100 rounded-lg p-2 flex items-center justify-between gap-2">
+            <span className="min-w-0 break-words">{displayedSimulationError}</span>
+            {lastSimulationRequest && (
+              <button
+                onClick={() => void retryLastSimulation()}
+                className="shrink-0 font-bold text-rose-700 bg-rose-100 hover:bg-rose-200 rounded-md px-2 py-1 transition-colors"
+              >
+                {RETRY_LABEL}
+              </button>
+            )}
+          </div>
+        )}
 
         <button
           onClick={handleSimulateClick}
-          disabled={isSimulating || connectionStatus === 'Loading' || isCheckingCompound}
+          // Tidak di-disable saat connectionStatus 'Loading': pada cold start,
+          // health check awal bisa butuh 30–60 dtk. User tetap boleh mencoba;
+          // request akan menunggu dengan timeout longgar di sisi client.
+          disabled={isSimulating || isCheckingCompound}
           className="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-bold rounded-xl text-sm px-5 py-3 text-center transition-colors shadow-sm disabled:opacity-50 mt-2"
         >
           {isCheckingCompound ? 'Memeriksa senyawa...' : isSimulating ? 'Memproses...' : 'Simulasikan Toksisitas'}
         </button>
+
+        {(isSimulationSlow || isCompoundCheckSlow) && (
+          <p className="mt-2 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
+            {COLD_START_WAIT_MESSAGE}
+          </p>
+        )}
       </div>
 
       <div className="mt-auto pt-4 border-t border-slate-200">

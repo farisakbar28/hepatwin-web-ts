@@ -5,14 +5,32 @@ import type { AppApiError, AutocompleteResponse, CompoundDetail, HealthResponse,
 const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const BASE_URL = rawBaseUrl.replace(/\/+$/, '');
 
+/**
+ * Batas waktu permintaan data (ms). Backend FastAPI Cloud (free tier)
+ * menerapkan scale-to-zero: request pertama setelah idle memicu cold start
+ * 30–60 detik, jadi timeout 8 detik yang lama terlalu pendek dan memutus
+ * request secara sepihak. Nilai ini sengaja longgar (>= 60 dtk) — request
+ * pertama harus sabar menunggu instance backend menyala.
+ */
+export const REQUEST_TIMEOUT_MS = 60000;
+
+/** Simulasi bisa menanggung cold start SEKALIGUS proses PBPK/SHAP yang panjang
+ *  (jalur SHAP tail lebih lama dari permintaan biasa), diberi kelonggaran
+ *  lebih dari client default. */
+export const SIMULATION_TIMEOUT_MS = 120000;
+
+/** Batas waktu health check (ms). Health check sering menjadi request PERTAMA
+ *  setelah idle (pemicu cold start), sehingga ikut dilonggarkan. */
+export const HEALTH_TIMEOUT_MS = 60000;
+
 export const apiClient = axios.create({
   baseURL: `${BASE_URL}/api/v1`,
-  timeout: 8000,
+  timeout: REQUEST_TIMEOUT_MS,
 });
 
 const healthClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 3000,
+  timeout: HEALTH_TIMEOUT_MS,
 });
 
 function extractMessage(detail: unknown): string | null {
@@ -144,20 +162,64 @@ export const fetchCompoundDetail = async (
 
 export const simulateDILI = async (payload: SimulationRequest): Promise<SimulationResponse> => {
   try {
-    // Timeout longgar untuk simulasi: proses dibiarkan berjalan selama backend
-    // masih bekerja (jalur SHAP tail bisa lebih lama dari permintaan biasa).
-    const response = await apiClient.post<SimulationResponse>('/simulate', payload, { timeout: 60000 });
+    // Timeout longgar untuk simulasi: request ini bisa menanggung cold start
+    // sekaligus proses backend yang panjang (jalur SHAP tail lebih lama dari
+    // permintaan biasa).
+    const response = await apiClient.post<SimulationResponse>('/simulate', payload, { timeout: SIMULATION_TIMEOUT_MS });
     return response.data;
   } catch (err: unknown) {
     throw toAppApiError(err);
   }
 };
 
-export const checkHealth = async (): Promise<boolean> => {
+export interface HealthProbeResult {
+  up: boolean;
+  /** true bila kegagalan diduga karena cold start (timeout / 5xx saat boot)
+   *  dan layak dicoba ulang dengan jeda lebih lama; false bila server
+   *  kemungkinan besar benar-benar mati / tidak terjangkau. */
+  coldStartLikely: boolean;
+}
+
+/** Satu probe GET /health. Tidak melempar error; hasil diklasifikasikan agar
+ *  pemanggil bisa membedakan "server sedang dibangunkan" vs "server mati". */
+export async function probeHealth(): Promise<HealthProbeResult> {
   try {
     const response = await healthClient.get<HealthResponse>('/health');
-    return response.data.status === 'ok' && response.data.pkpd_engine_ready === true;
-  } catch {
-    return false;
+    return {
+      up: response.data.status === 'ok' && response.data.pkpd_engine_ready === true,
+      coldStartLikely: false,
+    };
+  } catch (err: unknown) {
+    const axiosError = axios.isAxiosError(err) ? (err as AxiosError) : null;
+    const isTimeout = axiosError?.code === 'ECONNABORTED';
+    const status = axiosError?.response?.status;
+    // Timeout = request masih menggantung menunggu instance menyala.
+    // 5xx (mis. 503 saat warmup) = instance sudah menyala tapi belum siap.
+    return { up: false, coldStartLikely: isTimeout || (status !== undefined && status >= 500) };
   }
-};
+}
+
+/** Jeda antar percobaan ulang: lama untuk kegagalan mirip cold start, singkat
+ *  untuk kegagalan cepat (server mati / CORS). */
+const COLD_START_RETRY_GAP_MS = 15000;
+const FAST_RETRY_GAP_MS = 3000;
+const MAX_PROBES = 3;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Probe /health dengan retry terbatas yang sadar cold start: kegagalan yang
+ *  mirip cold start (timeout / 5xx) dicoba ulang dengan jeda lebih lama supaya
+ *  instance backend punya waktu menyala (30–60 dtk); kegagalan cepat (server
+ *  mati / CORS) dicoba ulang singkat lalu menyerah agar UI tidak menunggu
+ *  terlalu lama menyatakan backend tidak tersedia. */
+export async function probeHealthWithRetries(): Promise<boolean> {
+  for (let attempt = 1; attempt <= MAX_PROBES; attempt += 1) {
+    const result = await probeHealth();
+    if (result.up) return true;
+    if (attempt === MAX_PROBES) return false;
+    await sleep(result.coldStartLikely ? COLD_START_RETRY_GAP_MS : FAST_RETRY_GAP_MS);
+  }
+  return false;
+}

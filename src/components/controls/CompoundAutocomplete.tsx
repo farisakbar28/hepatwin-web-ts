@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useDebounce } from '../../hooks/useDebounce';
+import { useSlowRequestDetector } from '../../hooks/useSlowRequestDetector';
+import { COLD_START_WAIT_MESSAGE, RETRY_LABEL } from '../../constants/labels';
 import { fetchCompoundsAutocomplete } from '../../services/api';
 import type { AppApiError, CompoundSelection } from '../../types';
 
@@ -14,6 +16,10 @@ export function CompoundAutocomplete({ selectedCompound, setSelectedCompound }: 
   const [isFetching, setIsFetching] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  // Pemicu ulang fetch yang sama (mis. tombol "Coba Lagi" setelah error).
+  const [retryKey, setRetryKey] = useState(0);
+
+  const isFetchSlow = useSlowRequestDetector(isFetching);
 
   const debouncedSearchTerm = useDebounce(searchTerm.trim(), 300);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -73,7 +79,7 @@ export function CompoundAutocomplete({ selectedCompound, setSelectedCompound }: 
     void fetchResults();
 
     return () => controller.abort();
-  }, [debouncedSearchTerm, selectedCompound, searchTerm]);
+  }, [debouncedSearchTerm, selectedCompound, searchTerm, retryKey]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -133,10 +139,24 @@ export function CompoundAutocomplete({ selectedCompound, setSelectedCompound }: 
         </div>
       )}
 
+      {isFetchSlow && (
+        <p className="mt-1 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5">
+          {COLD_START_WAIT_MESSAGE}
+        </p>
+      )}
+
       {isDropdownOpen && !isFetching && (
         <ul id="compound-autocomplete-list" role="listbox" className="absolute z-10 w-full bg-white border border-slate-200 mt-1 max-h-40 overflow-y-auto rounded-lg shadow-lg">
           {errorMsg ? (
-             <li className="px-4 py-2 text-sm text-rose-500">{errorMsg}</li>
+             <li className="px-4 py-2 text-sm text-rose-500 flex items-center justify-between gap-2">
+               <span className="min-w-0">{errorMsg}</span>
+               <button
+                 onClick={() => setRetryKey((k) => k + 1)}
+                 className="shrink-0 font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-md px-2 py-1 transition-colors"
+               >
+                 {RETRY_LABEL}
+               </button>
+             </li>
           ) : results.length > 0 ? (
             results.map(c => (
               <li

@@ -56,6 +56,20 @@ export const shapGroupLabel: Record<string, string> = {
  *  TIDAK tersedia; label mentah "trained" tidak pernah dirender ke pengguna. */
 export const MODEL_UNAVAILABLE_LABEL = 'Model AI tidak tersedia';
 
+/** Cold start backend (FastAPI Cloud free tier, scale-to-zero): pesan singkat
+ *  saat request sudah berjalan lebih lama dari biasanya (> 5 dtk) — server
+ *  sedang dibangunkan, bukan request yang macet. */
+export const COLD_START_WAIT_MESSAGE =
+  'Server sedang dibangunkan, mohon tunggu sebentar...';
+
+/** Penjelasan tambahan cold start — dipakai di banner yang lebih besar
+ *  (dashboard) agar pengguna paham kenapa permintaan pertama lebih lama. */
+export const COLD_START_WAIT_DETAIL =
+  'Backend tidur setelah lama tidak aktif dan sedang dinyalakan kembali. Proses ini bisa memakan waktu 30–60 detik pada permintaan pertama.';
+
+/** Label tombol ulangi aksi setelah error (fallback UI, bukan pesan teknis). */
+export const RETRY_LABEL = 'Coba Lagi';
+
 /** Pola cedera (injury_pattern) — label PRD §8.3: hepatoseluler / kolestatik /
  *  campuran / tanpa monograf. Nilai tak dikenal ditampilkan mentah. */
 export const injuryPatternLabel: Record<string, string> = {

@@ -36,6 +36,15 @@ Dikembangkan untuk **GEMASTIK XIX / 2026** (Kompetisi VIII: Pengembangan Perangk
    - `toAppApiError()` memetakan error 400/422/404/503/5xx/timeout/network ke pesan Bahasa Indonesia yang ramah (selaras dengan bentuk error Pydantic backend).
    - Indikator status koneksi backend real-time ("Terhubung ke Backend AI/PBPK" / "Backend tidak tersedia") via `GET /health`.
 
+7. **Penanganan Cold Start Backend (Scale-to-Zero):**
+   - Backend FastAPI Cloud free tier menidurkan instance saat idle (cold start 30–60 dtk pada request pertama). Semua request data memakai timeout longgar (≥ 60 dtk) sehingga request pertama tidak diputus sepihak oleh frontend; endpoint simulasi diberi kelonggaran ekstra (120 dtk).
+   - Jika request berjalan > 5 detik, UI menampilkan pesan ramah **"Server sedang dibangunkan, mohon tunggu sebentar..."** (indikator koneksi, tombol simulasi, autocomplete, dan banner dashboard) — bukan spinner yang diam saja.
+   - Health check memakai probe sadar cold start (`probeHealthWithRetries`): kegagalan mirip cold start (timeout / 5xx saat warmup) dicoba ulang dengan jeda lebih lama; kegagalan cepat (server mati / CORS) menyerah lebih cepat supaya status "Backend tidak tersedia" tidak menunggu terlalu lama.
+   - Setiap kegagalan akhir menyediakan fallback UI **"Coba Lagi"** (tombol simulasi & autocomplete) yang mengulang aksi terakhir, bukan layar blank atau pesan teknis.
+   - **Keep-alive dua lapis:**
+     - **Sisi browser** (`src/hooks/useKeepAlive.ts`): ping `GET /health` setiap 5 menit + segera saat tab kembali terlihat, agar instance tetap hangat selama aplikasi terbuka.
+     - **Sisi server** (`api/keep-alive.ts` + `vercel.json`): Vercel Cron Jobs memanggil serverless function `/api/keep-alive` yang mengetuk `/health` backend walau tidak ada browser yang membuka aplikasi. Jadwal default **sekali per hari** (`0 3 * * *` ≈ 11:00 WITA) agar patuh batasan plan Hobby (gratis) — menjamin backend setidaknya dibangunkan sekali sehari, tidak mati sepanjang hari. Pengguna plan **Pro** bisa mempercepat ke `*/5 * * * *` (lihat bagian *Vercel Cron Keep-Alive*).
+
 ---
 
 ## 🛠️ Stack Teknologi
@@ -45,7 +54,8 @@ Dikembangkan untuk **GEMASTIK XIX / 2026** (Kompetisi VIII: Pengembangan Perangk
 - **3D Engine:** React Three Fiber (`@react-three/fiber`), `@react-three/drei`, Three.js, GSAP (animasi kamera)
 - **State Management:** Zustand (`src/state/store.ts`)
 - **Grafik & Visualisasi Data:** Recharts
-- **HTTP Client:** Axios dengan mapping error terpusat (`toAppApiError`)
+- **HTTP Client:** Axios dengan mapping error terpusat (`toAppApiError`), timeout sadar cold start, dan probe health dengan retry (`probeHealthWithRetries`)
+- **Hooks Kustom:** `useSlowRequestDetector` (deteksi request > 5 dtk), `useKeepAlive` (ping berkala ke `/health`)
 - **Kualitas:** `tsc -b` (type-check) + oxlint
 
 ---
@@ -98,6 +108,37 @@ npm run lint
    ```
 3. Backend CORS sudah terbuka (`*`) — tidak diperlukan konfigurasi tambahan.
 4. Aplikasi adalah SPA satu halaman tanpa router — tidak perlu konfigurasi rewrites/redirects.
+5. **(Opsional) Cron keep-alive** — lihat bagian *Vercel Cron Keep-Alive* di bawah.
+
+---
+
+## ⏰ Vercel Cron Keep-Alive (Backend Tetap Terjaga)
+
+Repositori ini menyertakan dua file untuk menjaga backend FastAPI Cloud (scale-to-zero) agar setidaknya tidak tidur sepanjang hari (24/7 penuh hanya dengan plan Pro):
+
+- `vercel.json` — mendaftarkan cron job yang memanggil `/api/keep-alive` sekali per hari (`0 3 * * *`), jadwal maksimal yang diizinkan plan Hobby (gratis).
+- `api/keep-alive.ts` — serverless function ringan (tanpa dependency) yang melakukan HTTP GET ke `<VITE_API_BASE_URL>/health`, lalu merespons 200. Semantiknya *fire-and-forget*: cukup memicu cold start, tidak menunggu respons backend 30–60 dtk, sehingga tidak melanggar durasi eksekusi function.
+
+### ⚠️ Batasan Plan Vercel & Jadwal Default
+
+- **Hobby (gratis):** cron job **maksimal sekali per hari** — ekspresi yang lebih sering (mis. `*/5 * * * *`) akan **gagal saat deployment** dengan pesan *"Hobby accounts are limited to daily cron jobs"*. `vercel.json` memakai jadwal harian `0 3 * * *` (UTC; ≈ 11:00 WITA karena presisi Hobby ±59 menit) agar patuh. Tujuannya: memastikan backend setidaknya dibangunkan sekali sehari, bukan mati sepanjang hari. Kehangatan selama sesi pemakaian tetap ditangani keep-alive sisi browser + fallback UX (timeout 60 dtk, pesan cold start, tombol "Coba Lagi").
+- **Pro:** cron dapat berjalan tiap menit. Ganti `"schedule"` di `vercel.json` menjadi `"*/5 * * * *"` untuk ping tiap 5 menit (kehangatan 24/7).
+
+### Setup di Vercel
+
+1. Pastikan `VITE_API_BASE_URL` diset di environment variables Vercel (Production). Serverless function membaca `process.env.VITE_API_BASE_URL` (bukan `import.meta.env`) dan memakai `https://hepatwin-backend-py.fastapicloud.dev` sebagai fallback bila kosong.
+2. **(Disarankan)** Set `CRON_SECRET` (nilai acak bebas) di environment variables. Saat diset, Vercel mengirim header `Authorization: Bearer <CRON_SECRET>` dan fungsi menolak panggilan tanpa token tersebut — mencegah endpoint dipanggil orang lain.
+3. Deploy seperti biasa (`git push`). Cron aktif otomatis setelah deployment berhasil.
+
+### Uji manual
+
+```bash
+# Panggil endpoint keep-alive (hasil terlihat di Vercel Function Logs):
+curl https://<project>.vercel.app/api/keep-alive
+# → {"ok":true,"backendReachable":true,"checkedAt":"..."}
+```
+
+Untuk menjalankan function secara lokal, gunakan `npx vercel dev` (bukan `npm run dev`, karena `api/` hanya dijalankan oleh runtime Vercel).
 
 ---
 
